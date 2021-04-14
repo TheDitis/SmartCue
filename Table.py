@@ -10,6 +10,7 @@ class Table:
         self._cap = capture
         self._settings = settings
         self._found_lines = []
+        self._ref_frame = None
         self._boundaries = None
         self._pockets = None
         self._find_table_boundaries()
@@ -38,20 +39,17 @@ class Table:
                 "\nrho: int or float"
             )
 
-        for i in range(10):
+        for j in range(5):
             ret, frame = self._cap.read()
             if ret:
+                # save the first frame as the reference frame
+                if j == 0:
+                    self._ref_frame = frame
                 canny_setting = setting["canny"]
-
                 canny = canny_image(frame, canny_setting)
 
-                cv.imshow("canny", canny)
-
                 # save image to debug_images folder
-                cv.imwrite(
-                    "./debug_images/1_table_canny.png",
-                    canny
-                )
+                cv.imwrite("./debug_images/1_table_canny.png", canny)
 
                 lines = cv.HoughLinesP(
                     canny,
@@ -61,62 +59,14 @@ class Table:
                     minLineLength=min_line_length,
                     maxLineGap=max_line_gap
                 )
+
                 if lines is not None:
                     for i in range(len(lines)):
                         self._found_lines.append(lines[i][0])
 
-                print("lines found: ", len(self._found_lines))
-
-    def _canny_image(self, frame: np.ndarray, canny_setting: dict):
-        gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
-        try:
-            # Run canny edge-detection based on setting
-            if canny_setting["mode"] == "auto":
-                kwargs = {
-                    k: v for k, v in canny_setting.items()
-                    if k != "mode" and v is not None
-                }
-                canny = self._auto_canny(gray, **kwargs)
-            else:
-                low = canny_setting["low"]
-                thresh_ratio = canny_setting["thresh_ratio"]
-                canny = cv.Canny(
-                    gray,
-                    low,
-                    low * thresh_ratio
-                )
-
-        except KeyError:
-            raise KeyError(
-                "Malformed setting. Every setting must "
-                "include a 'canny' key, with an object that "
-                "contains a 'mode' key with a value of "
-                "either 'auto' or 'manual'"
-            )
-
-
-    @staticmethod
-    def _auto_canny(
-            frame: np.ndarray,
-            sigma: float = 0.33,
-            upper_mod: float = 1.0,
-            lower_mod: float = 1.0
-    ):
-        """
-        Returns a canny image
-        :param frame:
-        :param sigma:
-        :param upper_mod:
-        :param lower_mod:
-        :return:
-        """
-        # find the median of the single channel pixel intensities
-        v = np.median(frame)
-        # apply automatic Canny edge detection using the median
-        lower = int(max(0, (1.0 - sigma) * v) * lower_mod)
-        upper = int(min(255, (1.0 + sigma) * v) * upper_mod)
-        edged = cv.Canny(frame, lower, upper)
-        return edged
+        print("lines found: ", len(self._found_lines))
+        with_lines = draw_lines(self._ref_frame, self._found_lines)
+        cv.imwrite("./debug_images/2_table_lines.png", with_lines)
 
     def _get_hough_lines_settings(self) -> dict:
         setting_num = self._settings["table_detect_setting"]

@@ -1,14 +1,5 @@
 {
     "table_detect_setting": 1,
-    "table_detect_defaults": {
-        "canny": {
-            "thresh_ratio": 3,
-            "low": 30
-        },
-        "min_line_length": 100000,
-        "max_line_gap": 10,
-        "rho": 1
-    },
     "table_detect_settings": [
         {
             "canny": {
@@ -17,24 +8,26 @@
                 "upper_mod": 0.5,
                 "lower_mod": null
             },
-            "min_line_length": 100000,
+            "min_line_length": 10,
             "max_line_gap": 10,
             "rho": 1
         },
         {
             "canny": {
-                "mode": "auto"
-            }
+                "mode": "auto",
+                "sigma": 0.2,
+                "upper_mod": 0.5,
+                "lower_mod": 0.1
+            },
+            "min_line_length": 100,
+            "max_line_gap": 20
         },
         {
             "canny": {
                 "mode": "manual",
                 "thresh_ratio": 3,
                 "low": 35
-            },
-            "min_line_length": 100000,
-            "max_line_gap": 10,
-            "rho": 1
+            }
         },
         {
             "canny": {
@@ -46,5 +39,14 @@
             "max_line_gap": 1,
             "rho": 1.5
         }
-    ]
+    ],
+    "table_detect_defaults": {
+        "canny": {
+            "thresh_ratio": 3,
+            "low": 30
+        },
+        "min_line_length": 100,
+        "max_line_gap": 10,
+        "rho": 1
+    }
 }
