@@ -7,13 +7,18 @@ from utils import (
     draw_lines,
     canny_image,
     rho_theta_to_xy_lines,
-    get_slope
+    get_slope,
+    draw_lines_by_group
 )
 from copy import deepcopy
 from collections import Counter
 import pandas as pd
-from sklearn.cluster import KMeans
+from sklearn.cluster import KMeans, DBSCAN
+from sklearn.neighbors import NearestNeighbors
 from typing import Tuple
+import seaborn as sns
+import matplotlib.pyplot as plt
+
 
 class Table:
     def __init__(self, capture: cv.CAP_V4L2, settings: dict):
@@ -122,7 +127,11 @@ class Table:
         df_v = df.loc[(df["slope"].isna()) | (df["slope"].abs() > 300)]
 
         # get rid of lines that sometimes show up around the borders
-        df_h, df_v = self._filter_edge_lines(df_h, df_v)
+        # and in the middle (ie. the kitchen line)
+        df_h, df_v = self._filter_found_lines(df_h, df_v)
+
+        # filter out lines in middle of table (ie. kitchen line)
+        # df_h,
 
         # get horizontal and vertical into np arrays without slope
         # horizontal = df_h.values[:, :4]
@@ -131,24 +140,34 @@ class Table:
         horizontal = df_h.drop("slope", axis=1)
         vertical = df_v.drop("slope", axis=1)
 
+
         # cluster lines into bumper edge, bumper back, & table edge
-        h_clusters = KMeans(n_clusters=6).fit(
-            horizontal[["x1", "x2"]]
+        h_clusters = DBSCAN(eps=7, min_samples=3).fit(
+            horizontal[["y1", "y2"]]
         )
-        v_clusters = KMeans(n_clusters=6).fit(
-            vertical[["y1", "y2"]]
+        v_clusters = DBSCAN(eps=7, min_samples=3).fit(
+            vertical[["x1", "x2"]]
         )
 
-        df_h["group"] = h_clusters.labels_
-        df_v["group"] = v_clusters.labels_
+        df_h["group"] = h_clusters.labels_.astype(str)
+        df_v["group"] = v_clusters.labels_.astype(str)
 
-        print(df_v.head())
+        h_lines = draw_lines_by_group(self._ref_frame, df_h)
+        cv.imwrite("./debug_images/4_horizontal_groups.png", h_lines)
+        v_lines = draw_lines_by_group(self._ref_frame, df_v)
+        cv.imwrite("./debug_images/4_vertical_groups.png", v_lines)
+
+        # sns.histplot(bins=100, data=df_v, x="x1", hue="group")
+        sns.histplot(bins=100, data=df_h, x="y1", hue="group")
+        plt.show()
+
+        print(df_v)
 
         self._found_lines = np.array(
             np.concatenate([np.array(horizontal), np.array(vertical)])
         ).astype(int)
 
-    def _filter_edge_lines(
+    def _filter_found_lines(
             self,
             hor: pd.DataFrame,
             vert: pd.DataFrame,
@@ -166,12 +185,24 @@ class Table:
         """
         h = self._ref_frame.shape[0]
         w = self._ref_frame.shape[1]
+        # filter out the lines within 'thresh' px of the borders
         hor_filtered = hor.loc[
             (hor["y1"] > thresh) | (abs(h - hor["y1"]) < thresh)
         ]
         vert_filtered = vert.loc[
             (vert["x1"] > thresh) | (abs(w - vert["x1"]) < thresh)
         ]
+
+        # filter out any lines in the middle of the table
+        hor_filtered = hor_filtered.loc[
+            (hor_filtered["y1"] < h / 4) |
+            (hor_filtered["y1"] > h - (h / 4))
+        ]
+        vert_filtered = vert_filtered.loc[
+            (vert_filtered["x1"] < w / 4) |
+            (vert_filtered["x1"] > w - (w / 4))
+        ]
+
         return hor_filtered, vert_filtered
 
     def draw_boundary_lines(

@@ -1,8 +1,41 @@
 import numpy as np
 from typing import Union
 import cv2 as cv
+import pandas as pd
 from numba import jit, njit
 import math
+import matplotlib.colors as mcolors
+
+default_colors = [
+    "red",
+    "orange",
+    "yellow",
+    "limegreen",
+    "blue",
+    "violet",
+    "blueviolet",
+    "salmon",
+    "darkorange",
+    "lightseagreen",
+    "aqua",
+    "lightblue"
+]
+
+
+def draw_line(
+        frame: np.ndarray,
+        line: Union[list, np.array],
+        color: Union[str, tuple] = (0, 0, 255),
+        thickness: int = 2
+):
+    x1, y1, x2, y2 = line
+    pt1, pt2 = (x1, y1), (x2, y2)
+    # if a color string was passed, convert it to BGR tuple
+    if isinstance(color, str):
+        color = mcolors.colorConverter.to_rgb(color)
+        color = tuple((int(v * 255) for v in color))
+        color = tuple(reversed(color))  # rgb to bgr
+    cv.line(frame, pt1, pt2, color, thickness)
 
 
 def draw_lines(
@@ -14,16 +47,13 @@ def draw_lines(
     """Draws given lines on given frame
     Args:
         frame: the frame you want to draw the lines on
+        lines: the lines you want drawn
         color: BGR formatted tuple
         thickness: line thickness
 
     Returns:
         the given frame with the table boundaries found drawn on
     """
-    def draw_line(frame_, line_):
-        x1, y1, x2, y2 = line_
-        pt1, pt2 = (x1, y1), (x2, y2)
-        cv.line(frame_, pt1, pt2, color, thickness)
 
     # make frame copy so we don't mutate the original frame
     copy = frame.copy()
@@ -38,7 +68,22 @@ def draw_lines(
         # if line_s is a group of lines
         else:
             for line in line_s:
-                draw_line(copy, line_s)
+                draw_line(copy, line)
+    return copy
+
+
+def draw_lines_by_group(
+        frame: np.ndarray,
+        lines: pd.DataFrame,
+) -> np.ndarray:
+    copy = frame.copy()
+    # draw each line coloring by the cluster it was assigned
+    for i, line in lines.iterrows():
+        color = default_colors[
+            int(line["group"]) % len(default_colors)
+        ]
+        points = line["x1":"y2"]
+        draw_line(copy, points, color)
     return copy
 
 
