@@ -1,6 +1,8 @@
 import numpy as np
 from typing import Union
 import cv2 as cv
+from numba import jit, njit
+import math
 
 
 def draw_lines(
@@ -41,7 +43,11 @@ def draw_lines(
 
 
 def canny_image(frame: np.ndarray, canny_setting: dict) -> np.ndarray:
-    gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
+    # blur = frame
+    # blur = cv.blur(frame, (5, 5))
+    blur = cv.bilateralFilter(frame, 15, 35, 175)
+    gray = cv.cvtColor(blur, cv.COLOR_BGR2GRAY)
+    cv.imwrite("./debug_images/1.5_blur.png", blur)
     try:
         # Run canny edge-detection based on setting
         if canny_setting["mode"] == "auto":
@@ -74,7 +80,8 @@ def auto_canny(
         frame: np.ndarray,
         sigma: float = 0.33,
         upper_mod: float = 1.0,
-        lower_mod: float = 1.0
+        lower_mod: float = 1.0,
+        aperture_size: int = None
 ) -> np.ndarray:
     """Calculates image mean and creates canny image based on it
 
@@ -83,6 +90,7 @@ def auto_canny(
         sigma:
         upper_mod:
         lower_mod:
+        aperture_size:
 
     Returns:
 
@@ -92,5 +100,35 @@ def auto_canny(
     # apply automatic Canny edge detection using the median
     lower = int(max(0, (1.0 - sigma) * v) * lower_mod)
     upper = int(min(255, (1.0 + sigma) * v) * upper_mod)
-    edged = cv.Canny(frame, lower, upper)
+    edged = cv.Canny(frame, lower, upper, apertureSize=aperture_size)
     return edged
+
+
+# @jit(nopython=True)
+def rho_theta_to_xy_lines(lines: np.array) -> np.ndarray:
+    return np.apply_along_axis(rho_theta_to_xy, 1, lines)
+
+
+@jit(nopython=True)
+def rho_theta_to_xy(row):
+    rho, theta = row
+    a = np.cos(theta)
+    b = np.sin(theta)
+    x0 = a * rho
+    y0 = b * rho
+    x1 = int(x0 + 1000 * -b)
+    y1 = int(y0 + 1000 * a)
+    x2 = int(x0 - 1000 * -b)
+    y2 = int(y0 - 1000 * a)
+    return np.array([x1, y1, x2, y2], dtype=np.float32)
+
+
+def get_slope(line):
+    line = np.array(line)
+    x1, y1, x2, y2 = line
+    if x2 - x1 == 0:
+        return float("-inf")
+    return (y2 - y1) / (x2 - x1)
+
+
+# def get_slope_

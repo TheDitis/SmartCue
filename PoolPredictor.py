@@ -4,7 +4,7 @@ import cv2 as cv
 
 
 class PoolPredictor:
-    def __init__(self, video_file="clips/2019_PoolChamp_Clip1.mp4"):
+    def __init__(self, video_file="clips/2019_PoolChamp_Clip4.mp4"):
         self._cap = cv.VideoCapture(video_file)
         self._settings = self._load_settings()
         self._table = Table(self._cap, self._settings)

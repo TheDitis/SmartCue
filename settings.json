@@ -1,26 +1,53 @@
 {
-    "table_detect_setting": 1,
+    "table_detect_setting": 0,
     "table_detect_settings": [
         {
             "canny": {
                 "mode": "auto",
-                "sigma": 0.8,
-                "upper_mod": 0.5,
-                "lower_mod": null
+                "sigma": 0.5,
+                "upper_mod": 6,
+                "lower_mod": 0,
+                "aperture_size": 5
             },
-            "min_line_length": 10,
+            "min_line_length": 70,
             "max_line_gap": 10,
-            "rho": 1
+            "rho": 1,
+            "thresh": 100
         },
         {
             "canny": {
                 "mode": "auto",
-                "sigma": 0.2,
-                "upper_mod": 0.5,
-                "lower_mod": 0.1
+                "sigma": 1.5,
+                "upper_mod": 0.3,
+                "lower_mod": 0
+            },
+            "min_line_length": 80,
+            "max_line_gap": 10,
+            "rho": 1,
+            "thresh": 100
+        },
+        {
+            "canny": {
+                "mode": "auto",
+                "sigma": 1.1,
+                "upper_mod": 0.33,
+                "lower_mod": 0
+            },
+            "min_line_length": 80,
+            "max_line_gap": 10,
+            "rho": 1,
+            "thresh": 100
+        },
+        {
+            "canny": {
+                "mode": "auto",
+                "sigma": 0.5,
+                "upper_mod": 0.4,
+                "lower_mod": 0.3
             },
             "min_line_length": 100,
-            "max_line_gap": 20
+            "max_line_gap": 20,
+            "rho": 0.6
         },
         {
             "canny": {
@@ -47,6 +74,7 @@
         },
         "min_line_length": 100,
         "max_line_gap": 10,
-        "rho": 1
+        "rho": 1,
+        "thresh": 200
     }
 }
