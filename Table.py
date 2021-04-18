@@ -15,9 +15,12 @@ from collections import Counter
 import pandas as pd
 from sklearn.cluster import KMeans, DBSCAN
 from sklearn.neighbors import NearestNeighbors
+from sklearn.metrics import pairwise_distances, mean_squared_error
 from typing import Tuple
 import seaborn as sns
 import matplotlib.pyplot as plt
+from scipy.spatial.distance import pdist
+from scipy.spatial.distance import squareform
 
 
 class Table:
@@ -130,16 +133,8 @@ class Table:
         # and in the middle (ie. the kitchen line)
         df_h, df_v = self._filter_found_lines(df_h, df_v)
 
-        # filter out lines in middle of table (ie. kitchen line)
-        # df_h,
-
-        # get horizontal and vertical into np arrays without slope
-        # horizontal = df_h.values[:, :4]
-        # vertical = df_v.values[:, :4]
-
         horizontal = df_h.drop("slope", axis=1)
         vertical = df_v.drop("slope", axis=1)
-
 
         # cluster lines into bumper edge, bumper back, & table edge
         h_clusters = DBSCAN(eps=7, min_samples=3).fit(
@@ -149,19 +144,16 @@ class Table:
             vertical[["x1", "x2"]]
         )
 
-        df_h["group"] = h_clusters.labels_.astype(str)
-        df_v["group"] = v_clusters.labels_.astype(str)
+        df_h["group"] = h_clusters.labels_  # .astype(str)
+        df_v["group"] = v_clusters.labels_  # .astype(str)
 
-        h_lines = draw_lines_by_group(self._ref_frame, df_h)
-        cv.imwrite("./debug_images/4_horizontal_groups.png", h_lines)
-        v_lines = draw_lines_by_group(self._ref_frame, df_v)
-        cv.imwrite("./debug_images/4_vertical_groups.png", v_lines)
+        # filter out lines that were not clustered
+        df_h = df_h[df_h["group"] >= 0]
+        df_v = df_v[df_v["group"] >= 0]
 
-        # sns.histplot(bins=100, data=df_v, x="x1", hue="group")
-        sns.histplot(bins=100, data=df_h, x="y1", hue="group")
-        plt.show()
+        self._split_clustered_lines_by_quadrant(df_h, df_v)
 
-        print(df_v)
+        self._save_found_line_cluster_debug_images(df_h, df_v)
 
         self._found_lines = np.array(
             np.concatenate([np.array(horizontal), np.array(vertical)])
@@ -183,8 +175,7 @@ class Table:
         Returns:
             filtered versions of the passed dataframes
         """
-        h = self._ref_frame.shape[0]
-        w = self._ref_frame.shape[1]
+        h, w, *_ = self._ref_frame.shape
         # filter out the lines within 'thresh' px of the borders
         hor_filtered = hor.loc[
             (hor["y1"] > thresh) | (abs(h - hor["y1"]) < thresh)
@@ -204,6 +195,135 @@ class Table:
         ]
 
         return hor_filtered, vert_filtered
+
+    def _split_clustered_lines_by_quadrant(
+            self,
+            hor: pd.DataFrame,
+            vert: pd.DataFrame
+    ):
+        h, w, *_ = self._ref_frame.shape
+
+        hor["side"] = hor.apply(
+            lambda l: "top" if l["y1"] < h / 2 else "bottom",
+            axis=1
+        )
+        vert["side"] = vert.apply(
+            lambda l: "left" if l["x1"] < h / 2 else "right",
+            axis=1
+        )
+
+        top = hor[hor["side"] == "top"]
+        bottom = hor[hor["side"] == "bottom"]
+        left = vert[vert["side"] == "left"]
+        right = vert[vert["side"] == "right"]
+
+        h_centers = hor.groupby("group")["y1"].mean()
+        v_centers = vert.groupby("group")["x1"].mean()
+
+        t_centers = top.groupby("group")["y1"].mean().to_frame()
+        b_centers = bottom.groupby("group")["y1"].mean().to_frame()
+        l_centers = left.groupby("group")["x1"].mean().to_frame()
+        r_centers = right.groupby("group")["x1"].mean().to_frame()
+
+        # print(t_centers)
+
+        t_dists = self._get_relative_distances(t_centers)
+        b_dists = self._get_relative_distances(b_centers)
+        l_dists = self._get_relative_distances(l_centers)
+        r_dists = self._get_relative_distances(r_centers)
+
+        merged = t_dists\
+            .merge(b_dists, how="cross", suffixes=("_t", "_b"))\
+            .merge(l_dists, how="cross")\
+            .merge(r_dists, how="cross", suffixes=("_l", "_r"))
+
+        value_cols = merged.columns[
+            merged.columns.str.startswith("value")
+        ]
+        values = merged[value_cols].apply(list, axis=1)
+        merged["values"] = values
+        merged.drop(value_cols, axis=1)
+        merged["mean"] = merged["values"].map(np.mean)
+
+        def mse(x, y):
+            mean = np.mean((x, y))
+            return abs(x / mean - y / mean) ** 2
+
+        def calc_err(row: pd.Series) -> int:
+            return sum(map(
+                lambda v: mse(v, row["mean"]),
+                row["values"])
+            )
+
+        merged["err"] = merged.apply(calc_err, axis=1)
+        merged.sort_values("err", inplace=True)
+
+        top_3 = merged[:3]
+        print(top_3)
+
+        group_cols = top_3.columns[
+            top_3.columns.str.startswith("group")
+        ]
+        groups = top_3[group_cols]
+
+        sns.heatmap(t_dists, cmap=sns.cm.rocket_r)
+        plt.show()
+
+    def _get_relative_distances(self, df: pd.DataFrame):
+        dists = pd.DataFrame(
+            pairwise_distances(df),
+            index=df.index,
+            columns=df.index
+        )
+        melt = dists.melt(ignore_index=False)
+        melt["value"] = melt["value"].round(2)
+        melt = melt[
+            (~melt["value"].duplicated()) & (melt["value"] != 0)
+        ]
+        melt.rename(columns={"group": "group2"}, inplace=True)
+        return melt.reset_index()
+
+    def _save_found_line_cluster_debug_images(
+            self,
+            hor: pd.DataFrame,
+            vert: pd.DataFrame,
+    ):
+        """
+        Saves 4 images, 2 for each line orientation. One of the lines
+        drawn on the reference frame colored by cluster and one of the
+        hist plot representing those clusters
+        Args:
+            hor: dataframe of clustered horizontal lines
+            vert: dataframe of clustered vertical lines
+
+        Returns:
+            None
+        """
+        # save clustered-line images to debug folder
+        cv.imwrite(
+            "./debug_images/3_horizontal_groups.png",
+            draw_lines_by_group(self._ref_frame, hor)
+        )
+        cv.imwrite(
+            "./debug_images/3_vertical_groups.png",
+            draw_lines_by_group(self._ref_frame, vert)
+        )
+
+        # change type of 'group' to string to improve plot colors
+        df_h = hor.copy()
+        df_h["group"] = df_h["group"].astype(str)
+        df_v = vert.copy()
+        df_v["group"] = df_v["group"].astype(str)
+
+        # plotting of the groups
+        h_plt = sns.histplot(bins=100, data=df_h, x="y1", hue="group")
+        h_plt.get_figure().savefig(
+            "./debug_images/4_horizontal_clusters_plot.png"
+        )
+        v_plt = sns.histplot(bins=100, data=df_v, x="x1", hue="group")
+        v_plt.get_figure().savefig(
+            "./debug_images/4_vertical_clusters_plot.png"
+        )
 
     def draw_boundary_lines(
             self,
