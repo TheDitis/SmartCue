@@ -16,6 +16,96 @@ from utils import (
 )
 
 
+class Boundary(pd.Series):
+    def __init__(self, row: pd.Series):
+        if isinstance(row, pd.DataFrame):
+            row = row.iloc[0]
+        super().__init__(row)
+
+    @property
+    def side(self):
+        return self['side']
+
+    @property
+    def type(self):
+        return self['type']
+
+    @property
+    def line(self):
+        return self['x1':'y2']
+
+    @property
+    def pt1(self):
+        return self['x1':'y1']
+
+    @property
+    def pt2(self):
+        return self['x2':'y2']
+
+
+class BoundaryGroup(pd.DataFrame):
+    def __init__(self, df: pd.DataFrame):
+        super().__init__(df.apply(Boundary))
+
+    @property
+    def top(self):
+        return self._get_by_side('t')
+
+    @property
+    def bottom(self):
+        return self._get_by_side('b')
+
+    @property
+    def left(self):
+        return self._get_by_side('l')
+
+    @property
+    def right(self):
+        return self._get_by_side('r')
+
+    @property
+    def t(self):
+        return self.top
+
+    @property
+    def b(self):
+        return self.bottom
+
+    @property
+    def l(self):
+        return self.left
+
+    @property
+    def r(self):
+        return self.right
+
+    @property
+    def bumper(self):
+        return self._get_by_type('bumper')
+
+    @property
+    def pocket(self):
+        return self._get_by_type('pocket')
+
+    @property
+    def table(self):
+        return self._get_by_type('table')
+
+    def _get_by_side(self, side):
+        grp = self[self["side"] == side]
+        if len(grp) == 1:
+            return Boundary(grp)
+        else:
+            return BoundaryGroup(grp)
+
+    def _get_by_type(self, kind):
+        grp = self[self["type"] == kind]
+        if len(grp) == 1:
+            return Boundary(grp)
+        else:
+            return BoundaryGroup(grp)
+
+
 class TableBoundaries:
     def __init__(self, cap: cv.CAP_V4L2, settings: dict):
         self._found_lines = np.array([])
@@ -24,7 +114,64 @@ class TableBoundaries:
         self._cap = cap
         self._boundaries = None
 
-    def find(self, ):
+    @property
+    def top(self):
+        return self._boundaries.top
+
+    @property
+    def bottom(self):
+        return self._boundaries.bottom
+
+    @property
+    def left(self):
+        return self._boundaries.left
+
+    @property
+    def right(self):
+        return self._boundaries.right
+
+    @property
+    def t(self):
+        return self.top
+
+    @property
+    def b(self):
+        return self.bottom
+
+    @property
+    def l(self):
+        return self.left
+
+    @property
+    def r(self):
+        return self.right
+
+    @property
+    def bumper(self):
+        return self._boundaries.bumper
+
+    @property
+    def pocket(self):
+        return self._boundaries.pocket
+
+    @property
+    def table(self):
+        return self._boundaries.table
+
+    def __repr__(self):
+        return self._boundaries
+
+    def __getitem__(self, item):
+        return self._boundaries[item]
+
+    def find(self):
+        """
+        Iterates of a few frames of the capture and identifies the
+        boundary lines of the table from those frames
+
+        Returns:
+            None
+        """
         # Get settings relevant to table line detection
         try:
             setting_num = self._settings["table_detect_setting"]
@@ -135,12 +282,15 @@ class TableBoundaries:
         # get cluster numbers we want to keep for each side
         cluster_sides = self._find_cluster_numbers_by_side(df_h, df_v)
 
-        self._side_line_clusters_to_boundaries(
-            df_h,
-            df_v,
-            cluster_sides
+        self._boundaries = BoundaryGroup(
+            self._side_line_clusters_to_boundaries(
+                df_h,
+                df_v,
+                cluster_sides
+            )
         )
 
+        # reassign found_lines with only horizontal and vertical lines
         self._found_lines = np.array(
             np.concatenate([np.array(horizontal), np.array(vertical)])
         ).astype(int)
@@ -370,7 +520,6 @@ class TableBoundaries:
             # add side and orientation
             lines["side"] = k
             lines["orientation"] = orientation
-            # reorder columns
             combined.append(lines)
 
         # combine list of dataframes into one
@@ -380,6 +529,7 @@ class TableBoundaries:
         combined.reset_index(inplace=True)
         combined.loc[combined["orientation"] == "v", 'group'] += 6
 
+        # reorder columns
         combined = combined[
             [
                 'x1', 'y1', 'x2', 'y2', 'orientation', 'side',
@@ -407,9 +557,13 @@ class TableBoundaries:
             )[0 if coord == 'x' else 1]
             return row
 
+        # get df where point ends are
         adjusted = combined.apply(join_points, axis=1)
 
+        # save debug images
         self._save_averaged_cluster_debug_images(combined, adjusted)
+
+        return adjusted
 
     @staticmethod
     def _get_relative_distances(df: pd.DataFrame) -> pd.DataFrame:

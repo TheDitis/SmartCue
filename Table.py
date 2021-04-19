@@ -34,6 +34,12 @@ class Table:
         self.boundaries.find()
         self._pockets = None
 
+        print("\nleft bumpers: ")
+        print(self.boundaries.top.bumper)
+
+        print("\nall bumpers")
+        print(self.boundaries.bottom.table.pt1)
+
     def draw_boundary_lines(
             self,
             frame: np.ndarray,
