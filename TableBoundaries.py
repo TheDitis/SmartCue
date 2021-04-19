@@ -388,12 +388,15 @@ class TableBoundaries:
         ]
 
         # sets the corners of each point to their intersection with neighbors
-        def join_points(row):
+        def join_points(row: pd.Series) -> pd.Series:
+            # coordinate that we want to adjust based on
             coord = 'x' if row.orientation == 'h' else 'y'
+            # get the adjacent boundaries of the same type
             adjacent = combined[
                 (combined.type == row.type) &
                 (combined.orientation != row.orientation)
             ].sort_values('y1' if coord == 'x' else 'x1')
+            # adjust points to intersection point with each neighbor
             row[f'{coord}1'] = find_intersection(
                 row["x1":"y2"],
                 adjacent.iloc[0]["x1":"y2"]
@@ -402,25 +405,11 @@ class TableBoundaries:
                 row["x1":"y2"],
                 adjacent.iloc[1]["x1":"y2"],
             )[0 if coord == 'x' else 1]
-            # print()
-            # print(row)
-            # print(adjacent)
             return row
 
         adjusted = combined.apply(join_points, axis=1)
-        print(adjusted)
-
-        h, w, *_ = self._ref_frame.shape
-        find_intersection(
-            list(combined.loc[0]["x1":"y2"]),
-            [0, 0, 0, h]
-        )
-        # print(combined)
 
         self._save_averaged_cluster_debug_images(combined, adjusted)
-
-
-
 
     @staticmethod
     def _get_relative_distances(df: pd.DataFrame) -> pd.DataFrame:
