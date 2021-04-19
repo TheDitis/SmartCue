@@ -1,5 +1,5 @@
 import numpy as np
-from typing import Union
+from typing import Union, Tuple
 import cv2 as cv
 import pandas as pd
 from numba import jit, njit
@@ -18,7 +18,9 @@ default_colors = [
     "darkorange",
     "lightseagreen",
     "aqua",
-    "lightblue"
+    "lightblue",
+    "firebrick",
+    "olivedrab"
 ]
 
 
@@ -37,6 +39,50 @@ def draw_line(
         color = tuple(reversed(color))  # rgb to bgr
     cv.line(frame, pt1, pt2, color, thickness)
 
+
+def find_intersection(
+        line1: Union[np.array, list, tuple],
+        line2: Union[np.array, list, tuple]
+) -> Tuple[int, int]:
+    x1, y1, x2, y2 = line1[0], line1[1], line1[2], line1[3]
+    sx1, sy1, sx2, sy2 = line2[0], line2[1], line2[2], line2[3]
+    line1 = ((x1, y1), (x2, y2))
+    line2 = ((sx1, sy1), (sx2, sy2))
+    x_diff = (line1[0][0] - line1[1][0], line2[0][0] - line2[1][0])
+    y_diff = (line1[0][1] - line1[1][1], line2[0][1] - line2[1][1])
+
+    def det(a, b):
+        return a[0] * b[1] - a[1] * b[0]
+
+    div = det(x_diff, y_diff)
+
+    if div != 0:
+        d = (det(*line1), det(*line2))
+        x = int(det(d, x_diff) / div)
+        y = int(det(d, y_diff) / div)
+        pt = (x, y)
+        return pt
+
+
+def find_intercept(
+        line: Union[np.array, list, tuple],
+        axis: str = "x",
+        intercept: int = 0
+) -> int:
+    """
+    Find where a given line intercepts a given intercept on a given
+    axis.
+    Args:
+        line: points of the line [x1, y1, x2, y2]
+        axis: the axis to check intercept of ('x' or 'y')
+        intercept: the point along given axis you want to see where
+        the line crosses
+
+    Returns:
+        the value of the other axis when the given line crosses the
+        given intercept of the given axis
+    """
+    raise NotImplementedError
 
 def draw_lines(
         frame: np.ndarray,
@@ -79,11 +125,15 @@ def draw_lines_by_group(
     copy = frame.copy()
     # draw each line coloring by the cluster it was assigned
     for i, line in lines.iterrows():
-        color = default_colors[
-            int(line["group"]) % len(default_colors)
-        ]
+        if line["group"] < 0:
+            color = "white"
+        else:
+            color = default_colors[
+                int(line["group"]) % len(default_colors)
+            ]
+
         points = line["x1":"y2"]
-        draw_line(copy, points, color)
+        draw_line(copy, points.astype(np.int32), color)
     return copy
 
 
