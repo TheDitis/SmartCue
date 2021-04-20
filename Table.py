@@ -1,44 +1,20 @@
-import math
-
 import cv2 as cv
 import numpy as np
-from typing import Union, Dict
-from utils import (
-    draw_lines,
-    canny_image,
-    rho_theta_to_xy_lines,
-    get_slope,
-    draw_lines_by_group
-)
-from copy import deepcopy
-from collections import Counter
-import pandas as pd
-from sklearn.cluster import KMeans, DBSCAN
-from sklearn.neighbors import NearestNeighbors
-from sklearn.metrics import pairwise_distances, mean_squared_error
-from typing import Tuple
-import seaborn as sns
-import matplotlib.pyplot as plt
-from scipy.spatial.distance import pdist
-from scipy.spatial.distance import squareform
 
 from TableBoundaries import TableBoundaries
+from PocketSet import PocketSet
 
 
 class Table:
     def __init__(self, capture: cv.CAP_V4L2, settings: dict):
         self._cap = capture
         self._settings = settings
-        self._ref_frame = None
+        _, self._ref_frame = capture.read()
         self.boundaries = TableBoundaries(capture, settings)
         self.boundaries.find()
-        self._pockets = None
-
-        print("\nleft bumpers: ")
-        print(self.boundaries.top.bumper)
-
-        print("\nall bumpers")
-        print(self.boundaries.bottom.table.pt1)
+        self.pockets = PocketSet()
+        self.pockets.find(self.boundaries)
+        self.pockets.draw(self._ref_frame)
 
     def draw_boundary_lines(
             self,

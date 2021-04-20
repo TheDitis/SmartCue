@@ -16,6 +16,57 @@ from utils import (
 )
 
 
+class Box(pd.DataFrame):
+    def __init__(self, df: pd.DataFrame):
+        if "x1" in df:
+            x_min = df["x1"].min()
+            x_max = df["x2"].max()
+            y_min = df["y1"].min()
+            y_max = df["y2"].max()
+
+            super().__init__(
+                np.array([
+                    [x_min, y_min, "tl", 't', 'l'],
+                    [x_max, y_min, "tr", 't', 'r'],
+                    [x_min, y_max, "bl", 'b', 'l'],
+                    [x_max, y_max, "br", 'b', 'r']
+                ]),
+                index=["tl", "tr", "bl", "br"],
+                columns=['x', 'y', 'loc', 'v_loc', 'h_loc'],
+            )
+            self['x'] = self['x'].astype(int)
+            self['y'] = self['y'].astype(int)
+        else:
+            super().__init__(df)
+
+    @classmethod
+    def concat(cls, box1: 'Box', box2: 'Box'):
+        return cls(pd.concat([box1, box2]))
+
+    def concat(self, other_box: 'Box') -> 'Box':
+        return Box(pd.concat([self, other_box]))
+
+    @property
+    def tl(self):
+        return self._get_corner('tl')
+
+    @property
+    def tr(self):
+        return self._get_corner('tr')
+
+    @property
+    def bl(self):
+        return self._get_corner('bl')
+
+    @property
+    def br(self):
+        return self._get_corner('br')
+
+    def _get_corner(self, loc: str):
+        row = self.loc[loc]
+        return row['x':'y']
+
+
 class Boundary(pd.Series):
     def __init__(self, row: pd.Series):
         if isinstance(row, pd.DataFrame):
@@ -91,6 +142,45 @@ class BoundaryGroup(pd.DataFrame):
     def table(self):
         return self._get_by_type('table')
 
+    @property
+    def top_left(self):
+        return self._get_corner("tl")
+
+    @property
+    def top_right(self):
+        return self._get_corner("tr")
+
+    @property
+    def bottom_left(self):
+        return self._get_corner("bl")
+
+    @property
+    def bottom_right(self):
+        return self._get_corner("br")
+
+    @property
+    def tl(self):
+        return self.top_left
+
+    @property
+    def tr(self):
+        return self.top_right
+
+    @property
+    def bl(self):
+        return self.bottom_left
+
+    @property
+    def br(self):
+        return self.bottom_right
+
+    @property
+    def corners(self):
+        if len(self) == 4:
+            return Box(self)
+        else:
+            return None
+
     def _get_by_side(self, side):
         grp = self[self["side"] == side]
         if len(grp) == 1:
@@ -104,6 +194,11 @@ class BoundaryGroup(pd.DataFrame):
             return Boundary(grp)
         else:
             return BoundaryGroup(grp)
+
+    def _get_corner(self, loc: str):
+        corners = self.corners
+        if corners is not None:
+            return corners.iloc[loc]
 
 
 class TableBoundaries:
@@ -476,8 +571,6 @@ class TableBoundaries:
                 cluster_sides['l'] + cluster_sides['r']
             )
         ]
-
-        print(vert[(vert["side"] == 'l') & (vert["group"] == 4)])
 
         combined = []
         # for each side of the table and cluster numbers for that side
