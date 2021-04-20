@@ -1,7 +1,8 @@
 import numpy as np
 import pandas as pd
 import cv2 as cv
-from TableBoundaries import TableBoundaries, Box
+from TableBoundaries import TableBoundaries
+from Box import Box
 
 from typing import Union
 

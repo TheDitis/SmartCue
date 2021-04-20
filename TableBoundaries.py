@@ -2,7 +2,6 @@ import cv2 as cv
 import numpy as np
 from copy import deepcopy
 import pandas as pd
-import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.cluster import DBSCAN
 from sklearn.metrics import pairwise_distances
@@ -14,194 +13,15 @@ from utils import (
     get_slope,
     find_intersection,
 )
-
-
-class Box(pd.DataFrame):
-    def __init__(self, df: pd.DataFrame):
-        if "x1" in df:
-            x_min = df["x1"].min()
-            x_max = df["x2"].max()
-            y_min = df["y1"].min()
-            y_max = df["y2"].max()
-
-            super().__init__(
-                np.array([
-                    [x_min, y_min, "tl", 't', 'l'],
-                    [x_max, y_min, "tr", 't', 'r'],
-                    [x_min, y_max, "bl", 'b', 'l'],
-                    [x_max, y_max, "br", 'b', 'r']
-                ]),
-                index=["tl", "tr", "bl", "br"],
-                columns=['x', 'y', 'loc', 'v_loc', 'h_loc'],
-            )
-            self['x'] = self['x'].astype(int)
-            self['y'] = self['y'].astype(int)
-        else:
-            super().__init__(df)
-
-    @classmethod
-    def concat(cls, box1: 'Box', box2: 'Box'):
-        return cls(pd.concat([box1, box2]))
-
-    def concat(self, other_box: 'Box') -> 'Box':
-        return Box(pd.concat([self, other_box]))
-
-    @property
-    def tl(self):
-        return self._get_corner('tl')
-
-    @property
-    def tr(self):
-        return self._get_corner('tr')
-
-    @property
-    def bl(self):
-        return self._get_corner('bl')
-
-    @property
-    def br(self):
-        return self._get_corner('br')
-
-    def _get_corner(self, loc: str):
-        row = self.loc[loc]
-        return row['x':'y']
-
-
-class Boundary(pd.Series):
-    def __init__(self, row: pd.Series):
-        if isinstance(row, pd.DataFrame):
-            row = row.iloc[0]
-        super().__init__(row)
-
-    @property
-    def side(self):
-        return self['side']
-
-    @property
-    def type(self):
-        return self['type']
-
-    @property
-    def line(self):
-        return self['x1':'y2']
-
-    @property
-    def pt1(self):
-        return self['x1':'y1']
-
-    @property
-    def pt2(self):
-        return self['x2':'y2']
-
-
-class BoundaryGroup(pd.DataFrame):
-    def __init__(self, df: pd.DataFrame):
-        super().__init__(df.apply(Boundary))
-
-    @property
-    def top(self):
-        return self._get_by_side('t')
-
-    @property
-    def bottom(self):
-        return self._get_by_side('b')
-
-    @property
-    def left(self):
-        return self._get_by_side('l')
-
-    @property
-    def right(self):
-        return self._get_by_side('r')
-
-    @property
-    def t(self):
-        return self.top
-
-    @property
-    def b(self):
-        return self.bottom
-
-    @property
-    def l(self):
-        return self.left
-
-    @property
-    def r(self):
-        return self.right
-
-    @property
-    def bumper(self):
-        return self._get_by_type('bumper')
-
-    @property
-    def pocket(self):
-        return self._get_by_type('pocket')
-
-    @property
-    def table(self):
-        return self._get_by_type('table')
-
-    @property
-    def top_left(self):
-        return self._get_corner("tl")
-
-    @property
-    def top_right(self):
-        return self._get_corner("tr")
-
-    @property
-    def bottom_left(self):
-        return self._get_corner("bl")
-
-    @property
-    def bottom_right(self):
-        return self._get_corner("br")
-
-    @property
-    def tl(self):
-        return self.top_left
-
-    @property
-    def tr(self):
-        return self.top_right
-
-    @property
-    def bl(self):
-        return self.bottom_left
-
-    @property
-    def br(self):
-        return self.bottom_right
-
-    @property
-    def corners(self):
-        if len(self) == 4:
-            return Box(self)
-        else:
-            return None
-
-    def _get_by_side(self, side):
-        grp = self[self["side"] == side]
-        if len(grp) == 1:
-            return Boundary(grp)
-        else:
-            return BoundaryGroup(grp)
-
-    def _get_by_type(self, kind):
-        grp = self[self["type"] == kind]
-        if len(grp) == 1:
-            return Boundary(grp)
-        else:
-            return BoundaryGroup(grp)
-
-    def _get_corner(self, loc: str):
-        corners = self.corners
-        if corners is not None:
-            return corners.iloc[loc]
+from BoundaryGroup import BoundaryGroup
 
 
 class TableBoundaries:
+    """
+    Represents the boundaries of the table. Finds the table boundaries
+    with the find method, and provides access to them through getter
+    properties like boundaries.top.bumper.
+    """
     def __init__(self, cap: cv.CAP_V4L2, settings: dict):
         self._found_lines = np.array([])
         self._ref_frame = None
@@ -322,13 +142,18 @@ class TableBoundaries:
                     self._found_lines = np.concatenate(
                         (self._found_lines, lines), axis=0)
 
-        self._group_found_lines()
+        self._boundaries = self._group_found_lines()
 
         print("lines found: ", len(self._found_lines))
         with_lines = draw_lines(self._ref_frame, self._found_lines)
         cv.imwrite("./debug_images/2_table_lines.png", with_lines)
 
     def _get_hough_lines_settings(self) -> dict:
+        """
+        Loads the settings relevant to hough-line-detection
+        Returns:
+            dictionary of parameters
+        """
         setting_num = self._settings["table_detect_setting"]
         setting = self._settings["table_detect_settings"][setting_num]
         defaults = self._settings["table_detect_defaults"]
@@ -340,15 +165,27 @@ class TableBoundaries:
                 output[key] = val
         return output
 
-    def _group_found_lines(self):
+    def _group_found_lines(self) -> BoundaryGroup:
+        """
+        groups the preliminary found-lines into clusters based on
+        their relative distances, identifies the clusters that have
+        similar relative distances on each side, and averages those
+        clusters into individual boundary lines.
+        Returns:
+            BoundaryGroup representing the identified set of table
+            boundaries
+        """
         # TODO: rotate some of the videos and adapt this to work with
-        df = pd.DataFrame(self._found_lines,
-                          columns=["x1", "y1", "x2", "y2"])
+        df = pd.DataFrame(
+            self._found_lines,
+            columns=["x1", "y1", "x2", "y2"]
+        )
         df["slope"] = df.apply(get_slope, axis=1)
         # get horizontal and vertical lines
         df_h = df.loc[df["slope"].abs() < 0.02]
         df_v = df.loc[
-            (df["slope"].isna()) | (df["slope"].abs() > 300)]
+            (df["slope"].isna()) | (df["slope"].abs() > 300)
+        ]
 
         # get rid of lines that sometimes show up around the borders
         # and in the middle (ie. the kitchen line)
@@ -377,18 +214,18 @@ class TableBoundaries:
         # get cluster numbers we want to keep for each side
         cluster_sides = self._find_cluster_numbers_by_side(df_h, df_v)
 
-        self._boundaries = BoundaryGroup(
+        # reassign found_lines with only horizontal and vertical lines
+        self._found_lines = np.array(
+            np.concatenate([np.array(horizontal), np.array(vertical)])
+        ).astype(int)
+
+        return BoundaryGroup(
             self._side_line_clusters_to_boundaries(
                 df_h,
                 df_v,
                 cluster_sides
             )
         )
-
-        # reassign found_lines with only horizontal and vertical lines
-        self._found_lines = np.array(
-            np.concatenate([np.array(horizontal), np.array(vertical)])
-        ).astype(int)
 
     def _filter_found_lines(
             self,
@@ -791,5 +628,3 @@ class TableBoundaries:
             color,
             thickness
         )
-
-
