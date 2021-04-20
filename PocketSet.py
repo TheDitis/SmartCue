@@ -7,14 +7,20 @@ from typing import Union
 
 
 class Pocket(pd.Series):
+    """
+    Wraps pandas Series and provides quick and concise access to the
+    location and size of the pocket. Must be initialized with a series
+    containing columns 'x', 'y', 'r', & 'num' at a minimum
+    """
     def __init__(
         self,
-        row: Union[list, pd.Series]
+        row: pd.Series
     ):
         super().__init__(row)
 
     @property
     def radius(self):
+        print("radius in getter: ", type(self['r'].astype(int)))
         return self['r'].astype(int)
 
     @property
@@ -31,6 +37,10 @@ class Pocket(pd.Series):
 
 
 class PocketSet(pd.DataFrame):
+    """
+    Wraps pandas DataFrame. Calculates locations and sizes of table
+    pockets, providing getters the wrap rows in Pocket class
+    """
     def __init__(self):
         super().__init__(
             columns=['x', 'y', 'r', 'loc', 'h_loc', 'v_loc', 'num']
@@ -38,9 +48,33 @@ class PocketSet(pd.DataFrame):
 
     @property
     def pocket_nums(self):
+        """
+        Returns:
+            Mapping of locations aliases ('tl', 'bm', etc.) to
+            pocket numbers
+        """
         return {'tl': 1, 'tm': 2, 'tr': 3, 'bl': 4, 'bm': 5, 'br': 6}
 
+    @property
+    def pocket_num_loc(self):
+        """
+        Returns:
+            Mapping of pocket numbers (1-6) to location aliases ('tl',
+            'bm', etc.)
+        """
+        return {v: k for k, v in self.pocket_nums.items()}
+
     def find(self, borders: TableBoundaries):
+        """
+        Calculates the location of the 6 pockets based on the border
+        locations. Fills self (pd.DataFrame) with rows of pockets
+        Args:
+            borders: The TableBoundaries object that has already run
+            its 'find' algorithm and has all 3 boundary boxes found
+
+        Returns:
+            None
+        """
         bumper_box = borders.bumper.corners
         pocket_box = borders.pocket.corners
         table_box = borders.table.corners
@@ -73,7 +107,6 @@ class PocketSet(pd.DataFrame):
 
         # add all the corner pockets
         for i, row in combined.iterrows():
-            print(row)
             self.loc[row["loc"]] = Pocket(row)
 
         # add the top side pocket
@@ -87,27 +120,72 @@ class PocketSet(pd.DataFrame):
             "h_loc": 'm', "v_loc": 'b', "num": self.pocket_nums['tm']
         }))
 
-    def __getitem__(self, item):
+    def __getitem__(self, item) -> Union[Pocket, pd.Series]:
+        """
+        Wraps __getitem__ of super by returning pocket instance of a
+        row if the item is a row identifier
+
+        Args:
+            item: anything you can index a pd.DataFrame with
+
+        Returns:
+            A Pocket if a row identifier is passed, otherwise whatever
+            the pd.DataFrame match would be
+        """
         if item in self.pocket_nums.keys():
-            return Pocket(super().__getitem__(item))
+            return Pocket(self.loc[item])
         else:
             return super().__getitem__(item)
 
-    def iterrows(self) -> Pocket:
+    def num(self, num: int) -> Union[Pocket, None]:
+        """
+        get pocket by pocket number. pocket numbers go from 1 through
+        6 and are in the order of left-to-right, top then bottom
+        (bottom left is 4, top right is 3, bottom middle is 5, etc.)
+        Args:
+            num: the number of the pocket you want
+
+        Returns:
+            a Pocket if the number is between 1 & 6, otherwise None
+        """
+        if num not in self.pocket_num_loc.keys():
+            return None
+        row = self.loc[self.pocket_num_loc[num]]
+        return Pocket(row)
+
+    def iter(self) -> Pocket:
+        """
+        Wraps iterrows from superclass, returning row as Pocket class
+        Yields:
+            Pocket instance
+        """
         for _, row in super().iterrows():
             yield Pocket(row)
 
     def draw(
             self,
-            frame: np.ndarray
+            frame: np.ndarray,
+            inplace: bool = False
     ) -> np.ndarray:
-        copy = frame.copy()
-        print("length of self: ", len(self))
-        for pocket in self.iterrows():
-            print("POCKET")
-            print(pocket)
-            print("pocket.r: ", pocket.r)
-            print("pocket.center: ", pocket.center)
-            cv.circle(copy, tuple(pocket.center), int(pocket.r), (0, 255, 0), 2)
-        cv.imwrite("./debug_images/7_pockets.png", copy)
-        return copy
+        """
+        draws the pockets on the given frame
+        Args:
+            frame: the frame you want pocket circles drawn on
+            inplace: modifies the passed frame if true
+
+        Returns:
+            A copy of the passed frame with pocket circles drawn on it
+        """
+        if not inplace:
+            frame = frame.copy()
+        for pocket in self.iter():
+            cv.circle(frame, tuple(pocket.center), 5, (0, 0, 255), -1)
+            cv.circle(
+                frame,
+                tuple(pocket.center),
+                int(pocket.r),
+                (0, 255, 0),
+                2,
+            )
+        cv.imwrite("./debug_images/7_pockets.png", frame)
+        return frame

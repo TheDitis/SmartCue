@@ -546,7 +546,7 @@ class TableBoundaries:
             hor: pd.DataFrame,
             vert: pd.DataFrame,
             cluster_sides: Dict[str, List[int]]
-    ):
+    ) -> pd.DataFrame:
         """
         finds the final table boundaries from the clustered horizontal
         and vertical groups of lines using dictionary of clusters per
@@ -559,6 +559,10 @@ class TableBoundaries:
             are the desired cluster numbers for that side
 
         Returns:
+            pandas DataFrame of all 12 table boundaries where lines
+            have been averaged from cluster lines and their ends
+            have been extended to their intersection points with their
+            neighboring boundaries of their type
         """
         # filter out any lines that aren't in the desired clusters
         hor = hor.loc[
@@ -783,7 +787,7 @@ class TableBoundaries:
         """
         return draw_lines(
             frame,
-            self._found_lines,
+            self._boundaries,
             color,
             thickness
         )

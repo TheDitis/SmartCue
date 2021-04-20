@@ -26,7 +26,7 @@ default_colors = [
 
 def draw_line(
         frame: np.ndarray,
-        line: Union[list, np.array],
+        line: Union[list, np.array, pd.Series],
         color: Union[str, tuple] = (0, 0, 255),
         thickness: int = 2
 ):
@@ -84,9 +84,10 @@ def find_intercept(
     """
     raise NotImplementedError
 
+
 def draw_lines(
         frame: np.ndarray,
-        lines: Union[list, np.array],
+        lines: Union[list, np.array, pd.DataFrame],
         color: tuple = (0, 0, 255),
         thickness: int = 2
 ) -> np.ndarray:
@@ -107,14 +108,27 @@ def draw_lines(
     if len(copy.shape) == 2:
         copy = cv.cvtColor(copy, cv.COLOR_GRAY2BGR)
 
-    for line_s in lines:
-        # if line_s is a single line:
-        if isinstance(line_s[0], (int, float, np.int32, np.int64)):
-            draw_line(copy, line_s)
-        # if line_s is a group of lines
-        else:
-            for line in line_s:
-                draw_line(copy, line)
+    if isinstance(lines, pd.DataFrame):
+        type_colors = {"table": 0, "pocket": 2, "bumper": 3}
+        for i, line in lines.iterrows():
+            if "type" in line:
+                color = default_colors[type_colors[line["type"]]]
+            else:
+                color = default_colors[i % len(default_colors)]
+            draw_line(
+                copy,
+                line[["x1", "y1", "x2", "y2"]],
+                color=color
+            )
+    else:
+        for line_s in lines:
+            # if line_s is a single line:
+            if isinstance(line_s[0], (int, float, np.int32, np.int64)):
+                draw_line(copy, line_s)
+            # if line_s is a group of lines
+            else:
+                for line in line_s:
+                    draw_line(copy, line)
     return copy
 
 

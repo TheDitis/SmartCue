@@ -14,6 +14,8 @@ class Table:
         self.boundaries.find()
         self.pockets = PocketSet()
         self.pockets.find(self.boundaries)
+        print("special pocket: ")
+        print(self.pockets.num(1).center)
         self.pockets.draw(self._ref_frame)
 
     def draw_boundary_lines(
