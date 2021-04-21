@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 from PoolPredictor.Boundaries.Boundary import Boundary
 from PoolPredictor.Point import Point
@@ -114,6 +115,11 @@ class BoundaryGroup(pd.DataFrame):
     def corners(self) -> Union[Box, None]:
         if len(self) == 4:
             return Box(self)
+
+    def crop_to(self, frame: np.ndarray) -> np.ndarray:
+        corners = self.corners
+        if corners is not None:
+            return corners.crop_to(frame)
 
     def _get_by_side(
             self,

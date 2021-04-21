@@ -1,6 +1,6 @@
 import cv2 as cv
 import numpy as np
-
+from scipy.stats import mode
 from PoolPredictor.Boundaries.TableBoundaries import TableBoundaries
 from PoolPredictor.Pockets.PocketSet import PocketSet
 from PoolPredictor.Balls.BallSet import BallSet
@@ -26,36 +26,45 @@ class Table:
         # get initial frame for reference
         _, self._ref_frame = capture.read()
         # Initialize and locate table boundaries
-        self.boundaries = TableBoundaries(capture, settings["table_detection"])
+        self.boundaries = TableBoundaries(
+            capture,
+            settings["table_detection"]
+        )
         self.boundaries.find()
 
-        print(self.boundaries.top.table.length)
         # Initialize and locate pockets
         self.pockets = PocketSet()
         self.pockets.find(self.boundaries)
         self.pockets.draw(self._ref_frame, save=True)
 
-        self.balls = BallSet(self.boundaries, settings["ball_detection"])
+        self.balls = BallSet(
+            self.boundaries,
+            settings["ball_detection"]
+        )
         
     @property
     def ready(self):
         return self.boundaries.ready and self.pockets.ready
     
-    # @property
-    # def size(self):
-    #     return self.boundaries.table.size
+    def _detect_color(self):
+        if self.boundaries.ready:
+            crop_box = self.boundaries.pocket.corners.bounding_rect
+            tl, _, _, br = crop_box.list_corners
+            crop = self._ref_frame[tl.y:br.y, tl.x:br.x]
 
     def draw_boundary_lines(
             self,
             frame: np.ndarray,
             color: tuple = (0, 0, 255),
-            thickness: int = 2
+            thickness: int = 2,
+            inplace: bool = False
     ) -> np.ndarray:
         """Draws found lines on given frame
         Args:
             frame: the frame you want to draw the lines on
             color: BGR formatted tuple
             thickness: line thickness
+            inplace: original frame will be modified if true
 
         Returns:
             the given frame with the table boundaries found drawn on
@@ -63,7 +72,8 @@ class Table:
         return self.boundaries.draw_boundary_lines(
             frame,
             color,
-            thickness
+            thickness,
+            inplace
         )
     
     @property

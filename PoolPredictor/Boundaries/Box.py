@@ -41,6 +41,10 @@ class Box(pd.DataFrame):
             super().__init__(df)
 
     @property
+    def list_corners(self):
+        return [self.tl, self.tr, self.bl, self.br]
+
+    @property
     def width_bounding(self) -> int:
         """
         Returns:
@@ -83,17 +87,22 @@ class Box(pd.DataFrame):
         return self.width, self.height
 
     @property
-    def bounding_rect(self) -> Tuple[Tuple[int, int], int, int]:
+    def bounding_rect(self) -> 'Box':
         """
-        Get the start coordinate and the height and width of the box
         Returns:
-            a tuple containing the top-left corner point (lowest x and
-            y values) and the height and width in the format of
-            ((x, y), w, h)
+            A Box instance that can fit the calling instance box
+            without rotation
         """
-        size = self.size_bounding
-        tl = self.tl
-        return (int(tl[0]), int(tl[1])), size[0], size[1]
+        x_min = min(self.tl['x'], self.bl['x'])
+        y_min = min(self.tl['y'], self.tr['y'])
+        width = self.width_bounding
+        height = self.height_bounding
+        copy = self.copy()
+        copy.loc['tl', 'x':'y'] = [x_min, y_min]
+        copy.loc['tr', 'x':'y'] = [x_min + width, y_min]
+        copy.loc['bl', 'x':'y'] = [x_min, y_min + height]
+        copy.loc['br', 'x':'y'] = [x_min + width, y_min + height]
+        return Box(copy)
 
     @property
     def tl(self) -> Point:
@@ -123,3 +132,8 @@ class Box(pd.DataFrame):
         """
         row = self.loc[loc]
         return Point(row['x'], row['y'])
+
+    def crop_to(self, frame: np.ndarray) -> np.ndarray:
+        bounding = self.bounding_rect
+        tl, br = bounding.tl, bounding.br
+        return frame[tl.y:br.y, tl.x:br.x]

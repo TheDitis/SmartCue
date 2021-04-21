@@ -9,7 +9,7 @@ class Point:
             x: Union[int, float, tuple, list, np.array, pd.Series],
             y: Union[int, float, tuple, None] = None
     ):
-        if x and y:
+        if x is not None and y is not None:
             points = [x, y]
         else:
             points = x
@@ -45,3 +45,7 @@ class Point:
     @property
     def y(self) -> Union[int, float]:
         return self._pts[1]
+
+    @property
+    def as_list(self):
+        return [self.x, self.y]

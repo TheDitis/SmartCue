@@ -24,36 +24,37 @@ class BallSet:
     ):
         setting_num = settings["setting_number"]
         self._settings = settings["ball_detect_settings"][setting_num]
+        self._boundaries = boundaries
         self._playfield = boundaries.bumper
         self._defaults = [0, 0, 10, 0, 0, 0, None, False, False]
         self._max_count = 16
         self._target_colors = colors
         self._balls = BallGroup
 
-    def find(self, frame: np.ndarray, save: bool = False):
-        # canny = canny_image(frame, self._settings["canny"])
+    def find(self, frame: np.ndarray):
         self._find_circles(frame)
-        # if save:
-        #     cv.imwrite("debug_images/8_ball_canny.png", canny)
 
     def _find_circles(self, frame: np.ndarray, save: bool = False):
-        # cimg = frame.copy()
-
-        gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
-        blur = cv.medianBlur(gray, 5)
+        # crop_box = self._boundaries.pocket.corners.bounding_rect
+        # tl, _, _, br = crop_box.list_corners
+        # crop = frame[tl.y:br.y, tl.x:br.x]
+        crop = self._boundaries.pocket.crop_to(frame)
+        gray = cv.cvtColor(crop, cv.COLOR_BGR2GRAY)
+        blur = cv.medianBlur(gray, 3)
         circles = cv.HoughCircles(
-            blur, cv.HOUGH_GRADIENT, 1, 12, param1=40, param2=20,
-            minRadius=12, maxRadius=20
+            blur, cv.HOUGH_GRADIENT, 2, 25, param1=60, param2=25,
+            minRadius=16, maxRadius=20
         )
 
-        # circles = np.uint16(np.around(circles))
-        # for i in circles[0, :]:
-        #     # draw the outer circle
-        #     cv.circle(frame, (i[0], i[1]), i[2], (0, 255, 0), 1)
-        #     # draw the center of the circle
-        #     cv.circle(frame, (i[0], i[1]), 2, (0, 0, 255), 3)
+        circles = np.uint16(np.around(circles))
+        # circles[0, :, 0:2] += np.array([tl.x, tl.y], dtype=np.uint16)
+        circles[0, :, 0:2] += np.array(
+            self._boundaries.pocket.tl.as_list,
+            dtype=np.uint16
+        )
+        for i in circles[0, :]:
+            # draw the outer circle
+            cv.circle(frame, (i[0], i[1]), i[2], (0, 255, 0), 1)
+            # draw the center of the circle
+            cv.circle(frame, (i[0], i[1]), 2, (0, 0, 255), 3)
 
-        # print("HERE2")
-        # cv.imshow('detected circles', frame)
-        # cv.waitKey(0)
-        # cv.destroyAllWindows()

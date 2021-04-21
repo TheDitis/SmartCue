@@ -91,7 +91,8 @@ def draw_lines(
         frame: np.ndarray,
         lines: Union[list, np.array, pd.DataFrame],
         color: tuple = (0, 0, 255),
-        thickness: int = 2
+        thickness: int = 2,
+        inplace: bool = False
 ) -> np.ndarray:
     """Draws given lines on given frame
     Args:
@@ -99,16 +100,18 @@ def draw_lines(
         lines: the lines you want drawn
         color: BGR formatted tuple
         thickness: line thickness
+        inplace: original frame is modified if true
 
     Returns:
         the given frame with the table boundaries found drawn on
     """
 
     # make frame copy so we don't mutate the original frame
-    copy = frame.copy()
+    if not inplace:
+        frame = frame.copy()
     # if frame is grayscale, convert so line colors work
-    if len(copy.shape) == 2:
-        copy = cv.cvtColor(copy, cv.COLOR_GRAY2BGR)
+    if len(frame.shape) == 2:
+        frame = cv.cvtColor(frame, cv.COLOR_GRAY2BGR)
 
     if isinstance(lines, pd.DataFrame):
         type_colors = {"table": 0, "pocket": 2, "bumper": 3}
@@ -118,7 +121,7 @@ def draw_lines(
             else:
                 color = default_colors[i % len(default_colors)]
             draw_line(
-                copy,
+                frame,
                 line[["x1", "y1", "x2", "y2"]],
                 color=color
             )
@@ -126,12 +129,12 @@ def draw_lines(
         for line_s in lines:
             # if line_s is a single line:
             if isinstance(line_s[0], (int, float, np.int32, np.int64)):
-                draw_line(copy, line_s)
+                draw_line(frame, line_s)
             # if line_s is a group of lines
             else:
                 for line in line_s:
-                    draw_line(copy, line)
-    return copy
+                    draw_line(frame, line)
+    return frame
 
 
 def draw_lines_by_group(

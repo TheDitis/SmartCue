@@ -24,10 +24,10 @@ class TableBoundaries:
     """
     def __init__(self, cap: cv.CAP_V4L2, settings: dict):
         self._found_lines = np.array([])
-        self._ref_frame = None
-        self._settings = settings
-        self._cap = cap
-        self._boundaries = None
+        self._ref_frame: Union[np.ndarray, None] = None
+        self._settings: dict = settings
+        self._cap: cv.CAP_V4L2 = cap
+        self._boundaries: Union[BoundaryGroup, None] = None
 
     @property
     def ready(self):
@@ -618,13 +618,15 @@ class TableBoundaries:
             self,
             frame: np.ndarray,
             color: tuple = (0, 0, 255),
-            thickness: int = 2
+            thickness: int = 2,
+            inplace: bool = False
     ) -> np.ndarray:
         """Draws found lines on given frame
         Args:
             frame: the frame you want to draw the lines on
             color: BGR formatted tuple
             thickness: line thickness
+            inplace: original frame will be modified if true
 
         Returns:
             the given frame with the table boundaries found drawn on
@@ -633,5 +635,6 @@ class TableBoundaries:
             frame,
             self._boundaries,
             color,
-            thickness
+            thickness,
+            inplace
         )
