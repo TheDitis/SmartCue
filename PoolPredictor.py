@@ -14,11 +14,7 @@ class PoolPredictor:
         while True:
             ret, frame = self._cap.read()
             if ret:
-
                 self._frame = frame
-                # clean_frame = frame.copy()
-                # self.table.find_balls(frame)
-                # frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
                 frame = self._table.draw_boundary_lines(frame)
                 cv.imshow('frame', frame)
                 if cv.waitKey(1) & 0xFF == ord('q'):

@@ -6,17 +6,31 @@ from PocketSet import PocketSet
 
 
 class Table:
+    """
+    Represents the billiards table. Most of the functionality of the
+    program is nested in this class. Contains the TableBoundaries,
+    PocketSet, and BallSet classes, where most of the core computer
+    vision algorithms live.
+    """
     def __init__(self, capture: cv.CAP_V4L2, settings: dict):
+        """
+        Initializes the table by locating table boundaries and pocket
+        locations.
+        Args:
+            capture: OpenCV capture object to read frames from
+            settings: dictionary of settings loaded from settings.json
+        """
         self._cap = capture
         self._settings = settings
+        # get initial frame for reference
         _, self._ref_frame = capture.read()
+        # Initialize and locate table boundaries
         self.boundaries = TableBoundaries(capture, settings)
         self.boundaries.find()
+        # Initialize and locate pockets
         self.pockets = PocketSet()
         self.pockets.find(self.boundaries)
-        print("special pocket: ")
-        print(self.pockets.num(1).center)
-        self.pockets.draw(self._ref_frame)
+        self.pockets.draw(self._ref_frame, save=True)
 
     def draw_boundary_lines(
             self,

@@ -2,39 +2,9 @@ import numpy as np
 import pandas as pd
 import cv2 as cv
 from TableBoundaries import TableBoundaries
+from Pocket import Pocket
 from Box import Box
-
 from typing import Union
-
-
-class Pocket(pd.Series):
-    """
-    Wraps pandas Series and provides quick and concise access to the
-    location and size of the pocket. Must be initialized with a series
-    containing columns 'x', 'y', 'r', & 'num' at a minimum
-    """
-    def __init__(
-        self,
-        row: pd.Series
-    ):
-        super().__init__(row)
-
-    @property
-    def radius(self):
-        print("radius in getter: ", type(self['r'].astype(int)))
-        return self['r'].astype(int)
-
-    @property
-    def r(self):
-        return self.radius
-
-    @property
-    def center(self):
-        return self[['x', 'y']].astype(int)
-
-    @property
-    def num(self):
-        return self['num']
 
 
 class PocketSet(pd.DataFrame):
@@ -166,13 +136,15 @@ class PocketSet(pd.DataFrame):
     def draw(
             self,
             frame: np.ndarray,
-            inplace: bool = False
+            inplace: bool = False,
+            save: bool = False
     ) -> np.ndarray:
         """
         draws the pockets on the given frame
         Args:
             frame: the frame you want pocket circles drawn on
             inplace: modifies the passed frame if true
+            save: saves image to debug_images folder if true
 
         Returns:
             A copy of the passed frame with pocket circles drawn on it
@@ -188,5 +160,6 @@ class PocketSet(pd.DataFrame):
                 (0, 255, 0),
                 2,
             )
-        cv.imwrite("./debug_images/7_pockets.png", frame)
+        if save:
+            cv.imwrite("./debug_images/7_pockets.png", frame)
         return frame

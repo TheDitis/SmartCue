@@ -5,10 +5,17 @@ import numpy as np
 class Box(pd.DataFrame):
     """
     Takes a pd.Dataframe representing a set of boundaries (ie. all
-    bumper boundaries) and converts it into a prepresentation of the
+    bumper boundaries) and converts it into a representation of the
     corner points, rather than connecting lines
     """
     def __init__(self, df: pd.DataFrame):
+        """
+        Converts rows of passed df representing lines to rows that
+        represent corner points.
+        Args:
+            df: dataframe containing 4 lines with columns x1, y1, x2,
+                & y2. These lines should represent sides of a box
+        """
         if "x1" in df:
             x_min = df["x1"].min()
             x_max = df["x2"].max()
@@ -46,6 +53,15 @@ class Box(pd.DataFrame):
     def br(self):
         return self._get_corner('br')
 
-    def _get_corner(self, loc: str):
+    def _get_corner(self, loc: str) -> pd.Series:
+        """
+        gets the x and y locations of the corner at the given location
+        Args:
+            loc: corner location shorthand, one of ['tl', 'tr', 'bl',
+             'br'] ('tr' = top-right, 'bl' = bottom-left, etc.)
+
+        Returns:
+            x and y locations of the corner requested as pd.Series
+        """
         row = self.loc[loc]
         return row['x':'y']

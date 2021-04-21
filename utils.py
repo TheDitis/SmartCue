@@ -30,6 +30,18 @@ def draw_line(
         color: Union[str, tuple] = (0, 0, 255),
         thickness: int = 2
 ):
+    """
+    Draws the given line on the given frame
+    Args:
+        frame: the frame you want to draw on
+        line: the line to draw (fist 4 elements must by x1, y1, x2,
+            & y2)
+        color: the color you want the line to be
+        thickness: the thickness in px you want the line to be
+
+    Returns:
+        None, modifies the passed frame
+    """
     x1, y1, x2, y2 = line
     pt1, pt2 = (x1, y1), (x2, y2)
     # if a color string was passed, convert it to BGR tuple
@@ -43,7 +55,17 @@ def draw_line(
 def find_intersection(
         line1: Union[np.array, list, tuple],
         line2: Union[np.array, list, tuple]
-) -> Tuple[int, int]:
+) -> Union[Tuple[int, int], None]:
+    """
+    Finds the intersection point of 2 lines
+    Args:
+        line1: array-like containing x1, y1, x2, & y2
+        line2: array-like containing x1, y1, x2, & y2
+
+    Returns:
+        Tuple with the x and y value of their intersection if the
+        lines are not parallel, otherwise None
+    """
     x1, y1, x2, y2 = line1[0], line1[1], line1[2], line1[3]
     sx1, sy1, sx2, sy2 = line2[0], line2[1], line2[2], line2[3]
     line1 = ((x1, y1), (x2, y2))
@@ -62,27 +84,6 @@ def find_intersection(
         y = int(det(d, y_diff) / div)
         pt = (x, y)
         return pt
-
-
-def find_intercept(
-        line: Union[np.array, list, tuple],
-        axis: str = "x",
-        intercept: int = 0
-) -> int:
-    """
-    Find where a given line intercepts a given intercept on a given
-    axis.
-    Args:
-        line: points of the line [x1, y1, x2, y2]
-        axis: the axis to check intercept of ('x' or 'y')
-        intercept: the point along given axis you want to see where
-        the line crosses
-
-    Returns:
-        the value of the other axis when the given line crosses the
-        given intercept of the given axis
-    """
-    raise NotImplementedError
 
 
 def draw_lines(
@@ -135,8 +136,23 @@ def draw_lines(
 def draw_lines_by_group(
         frame: np.ndarray,
         lines: pd.DataFrame,
+        inplace: bool = False
 ) -> np.ndarray:
-    copy = frame.copy()
+    """
+    Draws all lines in the given lines dataframe, where each line
+    group has a unique color
+    Args:
+        frame: The frame you want lines drawn on
+        lines: A dataframe of lines, where each row contains x1, y1,
+            x2, y2 (all 4 float or int), & group (int)
+        inplace: If true, the original frame will be modified rather
+            than copied
+
+    Returns:
+        Returns modified version of the passed frame with lines
+    """
+    if not inplace:
+        frame = frame.copy()
     # draw each line coloring by the cluster it was assigned
     for i, line in lines.iterrows():
         if line["group"] < 0:
@@ -147,13 +163,20 @@ def draw_lines_by_group(
             ]
 
         points = line["x1":"y2"]
-        draw_line(copy, points.astype(np.int32), color)
-    return copy
+        draw_line(frame, points.astype(np.int32), color)
+    return frame
 
 
 def canny_image(frame: np.ndarray, canny_setting: dict) -> np.ndarray:
-    # blur = frame
-    # blur = cv.blur(frame, (5, 5))
+    """
+    Run canny edge detection on the passed image.
+    Args:
+        frame: The frame to detect edges of
+        canny_setting: parameters for the edge detection algorithm
+
+    Returns:
+        Binary image as result of canny edge detection
+    """
     blur = cv.bilateralFilter(frame, 15, 35, 175)
     gray = cv.cvtColor(blur, cv.COLOR_BGR2GRAY)
     cv.imwrite("./debug_images/1.5_blur.png", blur)
@@ -192,17 +215,18 @@ def auto_canny(
         lower_mod: float = 1.0,
         aperture_size: int = None
 ) -> np.ndarray:
-    """Calculates image mean and creates canny image based on it
+    """
+    Calculates image mean and creates canny image based on it
 
     Args:
-        frame:
-        sigma:
-        upper_mod:
-        lower_mod:
-        aperture_size:
+        frame: the frame to run canny edge detection on
+        sigma: shift parameter for upper and lower thresholds
+        upper_mod: the upper threshold
+        lower_mod: the lower threshold
+        aperture_size: aperture size param passed directly to cv.Canny
 
     Returns:
-
+        Binary image as result of canny edge detection
     """
     # find the median of the single channel pixel intensities
     v = np.median(frame)

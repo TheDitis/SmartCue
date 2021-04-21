@@ -1,5 +1,6 @@
 from PoolPredictor import PoolPredictor
 
+
 def main():
     app = PoolPredictor()
     app.run()
