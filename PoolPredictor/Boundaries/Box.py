@@ -1,8 +1,8 @@
 import pandas as pd
 import numpy as np
 from typing import Tuple
-from utils import Point, distance
-from Point import Point
+from PoolPredictor.utils import Point, distance
+from PoolPredictor.Point import Point
 
 
 class Box(pd.DataFrame):

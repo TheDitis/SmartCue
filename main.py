@@ -1,4 +1,4 @@
-from PoolPredictor import PoolPredictor
+from PoolPredictor.PoolPredictor import PoolPredictor
 
 
 def main():

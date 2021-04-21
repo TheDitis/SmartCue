@@ -1,7 +1,7 @@
 import pandas as pd
-from Boundary import Boundary
-from Point import Point
-from Box import Box
+from PoolPredictor.Boundaries.Boundary import Boundary
+from PoolPredictor.Point import Point
+from PoolPredictor.Boundaries.Box import Box
 from typing import Union, Tuple
 
 

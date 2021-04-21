@@ -1,9 +1,9 @@
 import numpy as np
 import pandas as pd
 import cv2 as cv
-from TableBoundaries import TableBoundaries
-from Pocket import Pocket
-from Box import Box
+from PoolPredictor.Boundaries.TableBoundaries import TableBoundaries
+from PoolPredictor.Pockets.Pocket import Pocket
+from PoolPredictor.Boundaries.Box import Box
 from typing import Union
 
 
@@ -165,5 +165,5 @@ class PocketSet(pd.DataFrame):
                 2,
             )
         if save:
-            cv.imwrite("./debug_images/7_pockets.png", frame)
+            cv.imwrite("../../debug_images/7_pockets.png", frame)
         return frame

@@ -78,19 +78,6 @@
             "rho": 1,
             "thresh": 200
         }
-    },
-    "ball_detection": {
-        "setting_number": 0,
-        "ball_detect_settings": [
-            {
-                "canny": {
-                    "mode": "auto",
-                    "sigma": 0.5,
-                    "upper_mod": 6,
-                    "lower_mod": 0,
-                    "aperture_size": 5
-                }
-            }
-        ]
     }
+
 }

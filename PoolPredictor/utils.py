@@ -5,7 +5,7 @@ import pandas as pd
 from numba import jit, njit
 import math
 import matplotlib.colors as mcolors
-from Point import Point
+from PoolPredictor.Point import Point
 
 default_colors = [
     "red",
@@ -168,19 +168,24 @@ def draw_lines_by_group(
     return frame
 
 
-def canny_image(frame: np.ndarray, canny_setting: dict) -> np.ndarray:
+def canny_image(
+        frame: np.ndarray,
+        canny_setting: dict,
+        inplace: bool = False
+) -> np.ndarray:
     """
     Run canny edge detection on the passed image.
     Args:
         frame: The frame to detect edges of
         canny_setting: parameters for the edge detection algorithm
+        inplace: original frame is modified if true
 
     Returns:
         Binary image as result of canny edge detection
     """
     blur = cv.bilateralFilter(frame, 15, 35, 175)
     gray = cv.cvtColor(blur, cv.COLOR_BGR2GRAY)
-    cv.imwrite("./debug_images/1.5_blur.png", blur)
+    cv.imwrite("../debug_images/1.5_blur.png", blur)
     try:
         # Run canny edge-detection based on setting
         if canny_setting["mode"] == "auto":

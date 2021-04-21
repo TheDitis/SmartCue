@@ -1,8 +1,9 @@
 import cv2 as cv
 import numpy as np
 
-from TableBoundaries import TableBoundaries
-from PocketSet import PocketSet
+from PoolPredictor.Boundaries.TableBoundaries import TableBoundaries
+from PoolPredictor.Pockets.PocketSet import PocketSet
+from PoolPredictor.Balls.BallSet import BallSet
 
 
 class Table:
@@ -25,7 +26,7 @@ class Table:
         # get initial frame for reference
         _, self._ref_frame = capture.read()
         # Initialize and locate table boundaries
-        self.boundaries = TableBoundaries(capture, settings)
+        self.boundaries = TableBoundaries(capture, settings["table_detection"])
         self.boundaries.find()
 
         print(self.boundaries.top.table.length)
@@ -33,6 +34,8 @@ class Table:
         self.pockets = PocketSet()
         self.pockets.find(self.boundaries)
         self.pockets.draw(self._ref_frame, save=True)
+
+        self.balls = BallSet(self.boundaries, settings["ball_detection"])
         
     @property
     def ready(self):

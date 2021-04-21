@@ -6,14 +6,14 @@ import seaborn as sns
 from sklearn.cluster import DBSCAN
 from sklearn.metrics import pairwise_distances
 from typing import Union, Tuple, Dict, List
-from utils import (
+from PoolPredictor.utils import (
     canny_image,
     draw_lines,
     draw_lines_by_group,
     get_slope,
     find_intersection,
 )
-from BoundaryGroup import BoundaryGroup
+from PoolPredictor.Boundaries.BoundaryGroup import BoundaryGroup
 
 
 class TableBoundaries:
@@ -130,7 +130,7 @@ class TableBoundaries:
                 canny = canny_image(frame, canny_setting)
 
                 # save image to debug_images folder
-                cv.imwrite("./debug_images/1_table_canny.png", canny)
+                cv.imwrite("../../debug_images/1_table_canny.png", canny)
 
                 lines = cv.HoughLinesP(
                     canny,
@@ -153,7 +153,7 @@ class TableBoundaries:
 
         print("lines found: ", len(self._found_lines))
         with_lines = draw_lines(self._ref_frame, self._found_lines)
-        cv.imwrite("./debug_images/2_table_lines.png", with_lines)
+        cv.imwrite("../../debug_images/2_table_lines.png", with_lines)
 
     def _get_hough_lines_settings(self) -> dict:
         """
@@ -551,11 +551,11 @@ class TableBoundaries:
         """
         # save clustered-line images to debug folder
         cv.imwrite(
-            "./debug_images/3_horizontal_groups.png",
+            "../../debug_images/3_horizontal_groups.png",
             draw_lines_by_group(self._ref_frame, hor)
         )
         cv.imwrite(
-            "./debug_images/3_vertical_groups.png",
+            "../../debug_images/3_vertical_groups.png",
             draw_lines_by_group(self._ref_frame, vert)
         )
 
@@ -599,7 +599,7 @@ class TableBoundaries:
             self._ref_frame,
             averaged
         )
-        cv.imwrite("./debug_images/5_averaged_clusters.png", averaged)
+        cv.imwrite("../../debug_images/5_averaged_clusters.png", averaged)
 
         # Saving the image for joined-corner boundaries
         # make a copy where the group number is type for line image
@@ -612,7 +612,7 @@ class TableBoundaries:
             self._ref_frame,
             joined_groupby_type
         )
-        cv.imwrite("./debug_images/6_boundaries_joined.png", borders)
+        cv.imwrite("../../debug_images/6_boundaries_joined.png", borders)
 
     def draw_boundary_lines(
             self,

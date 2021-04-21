@@ -1,4 +1,4 @@
-from Table import Table
+from PoolPredictor.Table import Table
 import json
 import cv2 as cv
 
@@ -7,25 +7,28 @@ class PoolPredictor:
     def __init__(self, video_file="clips/2019_PoolChamp_Clip4.mp4"):
         self._cap = cv.VideoCapture(video_file)
         self._settings = self._load_settings()
-        self._table = Table(self._cap, self._settings)
+        self.table = Table(self._cap, self._settings)
         self._frame = None
 
     def run(self):
-        if self._table.ready:
+        if self.table.ready:
+            first_frame = True
             while True:
                 ret, frame = self._cap.read()
                 if ret:
                     self._frame = frame
-                    frame = self._table.draw_boundary_lines(frame)
+                    frame = self.table.draw_boundary_lines(frame)
+                    self.table.balls.find(frame, save=first_frame)
                     cv.imshow('frame', frame)
                     if cv.waitKey(1) & 0xFF == ord('q'):
                         break
                 else:
                     break
+                first_frame = False
             self._cap.release()
             cv.destroyAllWindows()
         else:
-            raise self._table.SetupError
+            raise self.table.SetupError
 
     @staticmethod
     def _load_settings():
@@ -36,24 +39,27 @@ class PoolPredictor:
         """
         # defaults in case the settings.json file is missing
         data = {
-            "table_detect_setting": 0,
-            "table_detect_settings": [
-                {
-                    "canny": "auto",
+            "table_detection": {
+                "table_detect_setting": 0,
+                "table_detect_settings": [
+                    {
+                        "canny": "auto",
+                        "min_line_length": 100000,
+                        "max_line_gap": 10,
+                        "rho": 1
+                    }
+                ],
+                "table_detect_defaults": {
+                    "canny": {
+                        "thresh_ratio": 3,
+                        "low": 30
+                    },
                     "min_line_length": 100000,
                     "max_line_gap": 10,
                     "rho": 1
-                }
-            ],
-            "table_detect_defaults": {
-                "canny": {
-                    "thresh_ratio": 3,
-                    "low": 30
                 },
-                "min_line_length": 100000,
-                "max_line_gap": 10,
-                "rho": 1
-            },
+            }
+
         }
         # attempt to load the settings file
         try:

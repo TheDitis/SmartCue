@@ -1,6 +1,6 @@
 import pandas as pd
 from typing import Union
-from utils import distance, Point
+from PoolPredictor.utils import distance, Point
 
 
 class Boundary(pd.Series):
