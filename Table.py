@@ -27,10 +27,20 @@ class Table:
         # Initialize and locate table boundaries
         self.boundaries = TableBoundaries(capture, settings)
         self.boundaries.find()
+
+        print(self.boundaries.top.table.length)
         # Initialize and locate pockets
         self.pockets = PocketSet()
         self.pockets.find(self.boundaries)
         self.pockets.draw(self._ref_frame, save=True)
+        
+    @property
+    def ready(self):
+        return self.boundaries.ready and self.pockets.ready
+    
+    # @property
+    # def size(self):
+    #     return self.boundaries.table.size
 
     def draw_boundary_lines(
             self,
@@ -52,4 +62,25 @@ class Table:
             color,
             thickness
         )
+    
+    @property
+    def SetupError(self):
+        if not self.boundaries.ready:
+            message = f"Boundaries were not detected successfully. " \
+                      f"Check the debug_images folder and tweak " \
+                      f"the settings.json file, or try a different " \
+                      f"setting number."
+        elif not self.pockets.ready:
+            message = f"Pockets not located successfully. Check " \
+                      f"the debug_images folder to make sure that " \
+                      f"all boundaries were found successfully. " \
+                      f"tweak the settings.json file or try a " \
+                      f"different setting number"
+        else:
+            message = f"An unknown error occurred during setup. " \
+                      f"Check debug_images folder for clues."
+        return TableSetupError(message)
 
+
+class TableSetupError(Exception):
+    pass

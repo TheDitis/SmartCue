@@ -11,18 +11,21 @@ class PoolPredictor:
         self._frame = None
 
     def run(self):
-        while True:
-            ret, frame = self._cap.read()
-            if ret:
-                self._frame = frame
-                frame = self._table.draw_boundary_lines(frame)
-                cv.imshow('frame', frame)
-                if cv.waitKey(1) & 0xFF == ord('q'):
+        if self._table.ready:
+            while True:
+                ret, frame = self._cap.read()
+                if ret:
+                    self._frame = frame
+                    frame = self._table.draw_boundary_lines(frame)
+                    cv.imshow('frame', frame)
+                    if cv.waitKey(1) & 0xFF == ord('q'):
+                        break
+                else:
                     break
-            else:
-                break
-        self._cap.release()
-        cv.destroyAllWindows()
+            self._cap.release()
+            cv.destroyAllWindows()
+        else:
+            raise self._table.SetupError
 
     @staticmethod
     def _load_settings():

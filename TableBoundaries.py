@@ -30,6 +30,10 @@ class TableBoundaries:
         self._boundaries = None
 
     @property
+    def ready(self):
+        return len(self) == 12
+
+    @property
     def top(self):
         return self._boundaries.top
 
@@ -78,6 +82,9 @@ class TableBoundaries:
 
     def __getitem__(self, item):
         return self._boundaries[item]
+
+    def __len__(self):
+        return len(self._boundaries)
 
     def find(self):
         """

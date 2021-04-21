@@ -18,6 +18,10 @@ class PocketSet(pd.DataFrame):
         )
 
     @property
+    def ready(self):
+        return len(self) == 6
+
+    @property
     def pocket_nums(self):
         """
         Returns:

@@ -5,6 +5,7 @@ import pandas as pd
 from numba import jit, njit
 import math
 import matplotlib.colors as mcolors
+from Point import Point
 
 default_colors = [
     "red",
@@ -256,7 +257,7 @@ def rho_theta_to_xy(row):
     return np.array([x1, y1, x2, y2], dtype=np.float32)
 
 
-def get_slope(line):
+def get_slope(line: Union[list, pd.Series, np.array, tuple]) -> float:
     line = np.array(line)
     x1, y1, x2, y2 = line
     if x2 - x1 == 0:
@@ -264,4 +265,12 @@ def get_slope(line):
     return (y2 - y1) / (x2 - x1)
 
 
-# def get_slope_
+def distance(
+        pt1: Point,
+        pt2: Point
+) -> Union[int, float]:
+    x1, y1 = pt1
+    x2, y2 = pt2
+    x_diff = abs(x2 - x1)
+    y_diff = abs(y2 - y1)
+    return math.sqrt((x_diff ** 2) + (y_diff ** 2))

@@ -1,5 +1,6 @@
 import pandas as pd
 from typing import Union
+from utils import distance, Point
 
 
 class Boundary(pd.Series):
@@ -17,21 +18,25 @@ class Boundary(pd.Series):
         super().__init__(row)
 
     @property
-    def side(self):
+    def side(self) -> str:
         return self['side']
 
     @property
-    def type(self):
+    def type(self) -> str:
         return self['type']
 
     @property
-    def line(self):
+    def line(self) -> pd.Series:
         return self['x1':'y2']
 
     @property
-    def pt1(self):
-        return self['x1':'y1']
+    def pt1(self) -> Point:
+        return Point(self['x1'], self['y1'])
 
     @property
-    def pt2(self):
-        return self['x2':'y2']
+    def pt2(self) -> Point:
+        return Point(self['x2'], self['y2'])
+
+    @property
+    def length(self) -> Union[int, float]:
+        return distance(self.pt1, self.pt2)

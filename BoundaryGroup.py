@@ -1,7 +1,8 @@
 import pandas as pd
 from Boundary import Boundary
+from Point import Point
 from Box import Box
-from typing import Union
+from typing import Union, Tuple
 
 
 class BoundaryGroup(pd.DataFrame):
@@ -92,11 +93,27 @@ class BoundaryGroup(pd.DataFrame):
         return self.bottom_right
 
     @property
-    def corners(self):
+    def size_bounding(self) -> Union[Tuple[int, int], None]:
+        corners = self.corners
+        if corners is not None:
+            return corners.size_bounding
+
+    @property
+    def size(self) -> Union[Tuple[int, int], None]:
+        corners = self.corners
+        if corners is not None:
+            return corners.size
+
+    @property
+    def rect(self) -> Union[Tuple[Tuple[int, int], int, int], None]:
+        corners = self.corners
+        if corners is not None:
+            return corners.bounding_rect
+
+    @property
+    def corners(self) -> Union[Box, None]:
         if len(self) == 4:
             return Box(self)
-        else:
-            return None
 
     def _get_by_side(
             self,
@@ -144,7 +161,7 @@ class BoundaryGroup(pd.DataFrame):
         else:
             return BoundaryGroup(grp)
 
-    def _get_corner(self, loc: str) -> Union[pd.Series, None]:
+    def _get_corner(self, loc: str) -> Union[Point, None]:
         """
         Gets corner at the given location
         Args:
@@ -156,7 +173,6 @@ class BoundaryGroup(pd.DataFrame):
             instance is a box with 4 lines and a valid loc string is
             passed, otherwise None
         """
-
         corners = self.corners
         if corners is not None and loc in ['tl', 'tr', 'bl', 'br']:
-            return corners.loc[loc]
+            return Point(corners.loc[loc])

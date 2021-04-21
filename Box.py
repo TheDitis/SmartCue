@@ -1,5 +1,8 @@
 import pandas as pd
 import numpy as np
+from typing import Tuple
+from utils import Point, distance
+from Point import Point
 
 
 class Box(pd.DataFrame):
@@ -38,22 +41,77 @@ class Box(pd.DataFrame):
             super().__init__(df)
 
     @property
-    def tl(self):
+    def width_bounding(self) -> int:
+        """
+        Returns:
+            Width that would fit the whole box
+        """
+        x_min = min(self.tl['x'], self.bl['x'])
+        x_max = max(self.tr['x'], self.br['x'])
+        return x_max - x_min
+
+    @property
+    def height_bounding(self) -> int:
+        """
+        Returns:
+            Height that would fit the whole box
+        """
+        y_min = min(self.tl['y'], self.tr['y'])
+        y_max = max(self.bl['y'], self.br['y'])
+        return y_max - y_min
+
+    @property
+    def size_bounding(self) -> Tuple[int, int]:
+        """
+        Returns:
+            (width, height) of the smallest box that the instance box
+            will fit in. Same as the box size if the box is not
+            rotated
+        """
+        return self.width_bounding, self.height_bounding
+
+    @property
+    def width(self):
+        return distance(self.tl, self.tr)
+
+    @property
+    def height(self):
+        return distance(self.tl, self.br)
+
+    @property
+    def size(self) -> Tuple[int, int]:
+        return self.width, self.height
+
+    @property
+    def bounding_rect(self) -> Tuple[Tuple[int, int], int, int]:
+        """
+        Get the start coordinate and the height and width of the box
+        Returns:
+            a tuple containing the top-left corner point (lowest x and
+            y values) and the height and width in the format of
+            ((x, y), w, h)
+        """
+        size = self.size_bounding
+        tl = self.tl
+        return (int(tl[0]), int(tl[1])), size[0], size[1]
+
+    @property
+    def tl(self) -> Point:
         return self._get_corner('tl')
 
     @property
-    def tr(self):
+    def tr(self) -> Point:
         return self._get_corner('tr')
 
     @property
-    def bl(self):
+    def bl(self) -> Point:
         return self._get_corner('bl')
 
     @property
-    def br(self):
+    def br(self) -> Point:
         return self._get_corner('br')
 
-    def _get_corner(self, loc: str) -> pd.Series:
+    def _get_corner(self, loc: str) -> Point:
         """
         gets the x and y locations of the corner at the given location
         Args:
@@ -64,4 +122,4 @@ class Box(pd.DataFrame):
             x and y locations of the corner requested as pd.Series
         """
         row = self.loc[loc]
-        return row['x':'y']
+        return Point(row['x'], row['y'])
