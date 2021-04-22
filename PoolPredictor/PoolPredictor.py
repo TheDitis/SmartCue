@@ -4,38 +4,43 @@ import cProfile
 import OpenGL
 import json
 import cv2 as cv
+from imutils.video import FPS
 
 
 class PoolPredictor:
-    def __init__(self, video_file="clips/2019_PoolChamp_Clip4.mp4"):
-        self._profiler = cProfile.Profile()
-        self._profiler.enable()
+    def __init__(
+            self,
+            video_file: str = "clips/2019_PoolChamp_Clip4.mp4"
+    ):
         self._cap = cv.VideoCapture(video_file)
         self._settings = self._load_settings()
+        self._profiler = cProfile.Profile()
+        if self._settings["program"]["profile"]:
+            self._profiler.enable()
+        self._fps = FPS()
         self.table = Table(self._cap, self._settings)
         self._frame = None
 
     def run(self):
+        self._fps.start()
         # try:
-        # self._run_opengl()
-        self._run_no_opengl()
+        self._run_opengl()
+        # self._run_no_opengl()
         # except (OpenGL.error.NullFunctionError, ModuleNotFoundError):
         #     self._run_no_opengl()
 
     def _run_opengl(self):
         def stop_loop():
-            self._profiler.disable()
-            self._profiler.print_stats(sort="time")
-            self._cap.release()
-            cv.destroyAllWindows()
+            self.stop()
 
         def play_frame():
             ret, frame = self._cap.read()
             if ret:
-                self.table.draw_boundary_lines(frame, inplace=True)
+                # self.table.draw_boundary_lines(frame, inplace=True)
                 self.table.balls.find(frame)
                 frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
                 viewer.set_image(frame)
+                self._fps.update()
             else:
                 viewer.destructor_function()
                 exit(9)
@@ -61,10 +66,7 @@ class PoolPredictor:
                         break
                 else:
                     break
-            self._cap.release()
-            cv.destroyAllWindows()
-            self._profiler.disable()
-            self._profiler.print_stats(sort="time")
+            self.stop()
         else:
             raise self.table.SetupError
 
@@ -77,6 +79,9 @@ class PoolPredictor:
         """
         # defaults in case the settings.json file is missing
         data = {
+            "program": {
+                "profile": True
+            },
             "table_detection": {
                 "table_detect_setting": 0,
                 "table_detect_settings": [
@@ -109,3 +114,13 @@ class PoolPredictor:
             with open("settings.json", "w") as file:
                 json.dump(data, file, indent=4, sort_keys=True)
         return data
+
+    def stop(self):
+        self._cap.release()
+        cv.destroyAllWindows()
+        self._fps.stop()
+        if self._settings["program"]["profile"]:
+            self._profiler.disable()
+            self._profiler.print_stats(sort="time")
+        print(f"time elapsed: {self._fps.elapsed():.2f}")
+        print(f"FPS: {self._fps.fps():.2f}")

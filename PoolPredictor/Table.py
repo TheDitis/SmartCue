@@ -51,20 +51,11 @@ class Table:
     
     def _detect_color(self):
         if self.boundaries.ready:
-            crop = self.boundaries.pocket.crop_to(self._ref_frame)
-            b = mode(crop[:, :, 0], axis=None)[0][0]
-            g = mode(crop[:, :, 1], axis=None)[0][0]
-            r = mode(crop[:, :, 2], axis=None)[0][0]
-            print("b: ", b)
-            print("g: ", g)
-            print("r: ", r)
+            crop = self.boundaries.bumper.crop_to(self._ref_frame)
+            flat = crop.reshape(crop.shape[0] * crop.shape[1], 3)
+            modes, counts = mode(flat)
+            return modes[0]
 
-            modes, counts = mode(crop, axis=1)
-            # print("color_mode: ", col_mode)
-            for m, c in zip(modes, counts):
-                print("m: ", m, " c: ", c)
-
-            return b, g, r
 
     def draw_boundary_lines(
             self,

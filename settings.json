@@ -1,4 +1,7 @@
 {
+    "program": {
+        "profile": true
+    },
     "table_detection": {
         "table_detect_setting": 0,
         "table_detect_settings": [
