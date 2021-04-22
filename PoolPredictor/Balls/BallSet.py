@@ -22,8 +22,9 @@ class BallSet:
         count: int = 16,
         colors: Union[Tuple[int], List[int], None] = None
     ):
-        setting_num = settings["setting_number"]
-        self._settings = settings["ball_detect_settings"][setting_num]
+        setting_num = settings["ball_detection"]["setting_number"]
+        self._settings = settings["ball_detection"]["ball_detect_settings"][setting_num]
+        self._use_cuda = settings["program"]["CUDA"]
         self._boundaries = boundaries
         self._playfield = boundaries.bumper
         self._defaults = [0, 0, 10, 0, 0, 0, None, False, False]
@@ -38,7 +39,10 @@ class BallSet:
         self._gpu_frame = cv.cuda_GpuMat()
 
     def find(self, frame: np.ndarray):
-        self._find_circles(frame)
+        if self._use_cuda:
+            self._find_circles_cuda(frame)
+        else:
+            self._find_circles(frame)
 
     def _find_circles(self, frame: np.ndarray):
         # crop the frame to the inside bumper lines and prepare it

@@ -24,8 +24,10 @@ class PoolPredictor:
     def run(self):
         self._fps.start()
         # try:
-        self._run_opengl()
-        # self._run_no_opengl()
+        if self._settings["program"]["OpenGL"]:
+            self._run_opengl()
+        else:
+            self._run_no_opengl()
         # except (OpenGL.error.NullFunctionError, ModuleNotFoundError):
         #     self._run_no_opengl()
 
@@ -62,6 +64,7 @@ class PoolPredictor:
                     self.table.draw_boundary_lines(frame, inplace=True)
                     self.table.balls.find(frame)
                     cv.imshow('frame', frame)
+                    self._fps.update()
                     if cv.waitKey(1) & 0xFF == ord('q'):
                         break
                 else:

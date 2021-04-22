@@ -1,6 +1,8 @@
 {
     "program": {
-        "profile": true
+        "profile": false,
+        "OpenGL": true,
+        "CUDA": true
     },
     "table_detection": {
         "table_detect_setting": 0,

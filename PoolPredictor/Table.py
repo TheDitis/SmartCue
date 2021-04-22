@@ -42,7 +42,7 @@ class Table:
 
         self.balls = BallSet(
             self.boundaries,
-            settings["ball_detection"]
+            settings
         )
         
     @property
