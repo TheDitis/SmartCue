@@ -2,13 +2,39 @@ import numpy as np
 import pandas as pd
 import cv2 as cv
 from typing import Union, Tuple, List
+from multipledispatch import dispatch
 
 from PoolPredictor.Boundaries.TableBoundaries import TableBoundaries
 from PoolPredictor.Point import Point
 from PoolPredictor.Boundaries.Box import Box
 
+number = (int, float, np.number)
+iterable = (list, tuple, pd.Series, np.ndarray)
+
 
 class Circle(pd.Series):
+    @dispatch(number, number, number)
+    def __init__(self, x, y, r):
+        # since you can't assign a series column names unless from a df
+        df = pd.DataFrame(
+            [[x, y, r]],
+            columns=['x', 'y', 'r']
+        )
+        super().__init__(
+            df.iloc[0]
+        )
+
+    @dispatch((pd.DataFrame, np.ndarray, pd.Series, list, tuple))
+    def __init__(self, vals):
+        if isinstance(vals, pd.DataFrame):
+            vals = vals.iloc[0]
+            self.__init__(vals['x'], vals['y'], vals['r'])
+        elif isinstance(vals, pd.Series) and 'x' in vals:
+            self.__init__(vals['x'], vals['y'], vals['r'])
+        elif isinstance(vals, iterable) and len(vals) >= 3:
+            x, y, r, *_ = vals
+            self.__init__(x, y, r)
+
     @property
     def center(self):
         return Point(self['x'], self['y'])
@@ -27,7 +53,13 @@ class Circle(pd.Series):
 
     def draw(self, frame: np.ndarray):
         self.box_inner.draw(frame)
-        self.box_outer.draw(frame)
+        # self.box_outer.draw(frame)
+
+    def find_color(self, frame: np.ndarray):
+        crop = self.box_inner.crop(frame)
+        flat = crop.reshape(crop.shape[0] * crop.shape[1], 3)
+        mean = np.mean(flat, axis=0)
+        print(mean)
 
 
 class BallGroup(pd.DataFrame):
@@ -81,14 +113,21 @@ class BallSet:
             circles = self._find_circles_cuda(frame)
         else:
             circles = self._find_circles(frame)
-        self._draw_circles(frame, circles)
-        circles = pd.DataFrame(
-            circles,
-            columns=['x', 'y', 'r']
-        )
-        for i, circle in circles.iterrows():
+        # self._draw_circles(frame, circles)
+        # circles = pd.DataFrame(
+        #     circles,
+        #     columns=['x', 'y', 'r']
+        # )
+        # e1 = cv.getTickCount()
+        for circle in circles:
             circ = Circle(circle)
+            circ.find_color(frame)
             circ.draw(frame)
+            # circ.find_color(frame)
+
+        # e2 = cv.getTickCount()
+        # t = (e2 - e1) / cv.getTickFrequency()
+        # print("T tick: ", t)
 
     def _find_circles(self, frame: np.ndarray) -> np.ndarray:
         """
@@ -100,7 +139,7 @@ class BallSet:
             None
         """
         # crop the frame to the inside bumper lines and prepare it
-        crop = self._boundaries.pocket.crop_to(frame)
+        crop = self._boundaries.pocket.crop(frame)
         gray = cv.cvtColor(crop, cv.COLOR_BGR2GRAY)
         blur = cv.medianBlur(gray, 3)
         # blur = gray
@@ -128,7 +167,7 @@ class BallSet:
             numpy array of circles
         """
         # crop the frame to the inside bumper lines and prepare it
-        crop = self._boundaries.pocket.crop_to(frame)
+        crop = self._boundaries.pocket.crop(frame)
         gray = cv.cvtColor(crop, cv.COLOR_BGR2GRAY)
         blur = cv.medianBlur(gray, 3)
         # blur = gray

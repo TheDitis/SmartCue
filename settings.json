@@ -1,7 +1,7 @@
 {
     "program": {
         "profile": false,
-        "OpenGL": true,
+        "OpenGL": false,
         "CUDA": true,
         "frame_delay": 0
     },

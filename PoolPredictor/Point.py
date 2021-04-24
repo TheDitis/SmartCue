@@ -3,6 +3,7 @@ import numpy as np
 from typing import Union, Tuple, Iterable
 from numbers import Number
 from collections import namedtuple
+from multipledispatch import dispatch
 
 
 class Point(namedtuple("Point", ('x', 'y'))):
@@ -11,7 +12,7 @@ class Point(namedtuple("Point", ('x', 'y'))):
 
     Attributes:
         x: returns x value (first item)
-        y: returns
+        y: returns y value (second item)
     """
 
     # to keep memory utilization low:
@@ -41,3 +42,21 @@ class Point(namedtuple("Point", ('x', 'y'))):
         else:
             super().__getitem__(item)
 
+    @dispatch((int, float, np.number), (int, float, np.number))
+    def translated(self, x: Number = 0, y: Number = 0):
+        new_x = max(self.x + int(x), 0)
+        new_y = max(self.y + int(y), 0)
+        return self.__class__((new_x, new_y))
+
+    @dispatch(tuple)
+    def translated(self, amounts: Union['Point', tuple]):
+        if isinstance(amounts, self.__class__):
+            x, y = amounts.x, amounts.y
+        else:
+            x, y = amounts[0], amounts[1]
+
+        return self.translated(x, y)
+
+    @property
+    def tup(self):
+        return self.x, self.y

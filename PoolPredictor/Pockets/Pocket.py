@@ -12,7 +12,7 @@ class Pocket(pd.Series):
 
     @property
     def radius(self):
-        return self['r'].astype(float)
+        return self['r'].round().astype(int)
 
     @property
     def x(self):

@@ -52,7 +52,7 @@ class Table:
     
     def _detect_color(self):
         if self.boundaries.ready:
-            crop = self.boundaries.bumper.crop_to(self._ref_frame)
+            crop = self.boundaries.bumper.crop(self._ref_frame)
             flat = crop.reshape(crop.shape[0] * crop.shape[1], 3)
             mean = np.mean(flat, axis=0)
             print("mean: ", mean)

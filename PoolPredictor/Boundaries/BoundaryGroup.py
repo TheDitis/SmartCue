@@ -106,7 +106,7 @@ class BoundaryGroup(pd.DataFrame):
             return corners.size
 
     @property
-    def rect(self) -> Union[Tuple[Tuple[int, int], int, int], None]:
+    def rect(self) -> Box:
         corners = self.corners
         if corners is not None:
             return corners.bounding_rect
@@ -116,10 +116,10 @@ class BoundaryGroup(pd.DataFrame):
         if len(self) == 4:
             return Box(self)
 
-    def crop_to(self, frame: np.ndarray) -> np.ndarray:
+    def crop(self, frame: np.ndarray) -> np.ndarray:
         corners = self.corners
         if corners is not None:
-            return corners.crop_to(frame)
+            return corners.crop(frame)
 
     def _get_by_side(
             self,
