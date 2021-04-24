@@ -1,7 +1,8 @@
+import time
+
 from PoolPredictor.Table import Table
 import pyglview
 import cProfile
-import OpenGL
 import json
 import cv2 as cv
 from imutils.video import FPS
@@ -9,14 +10,15 @@ from imutils.video import FPS
 
 class PoolPredictor:
     def __init__(
-            self,
-            video_file: str = "clips/2019_PoolChamp_Clip4.mp4"
+        self,
+        video_file: str = "clips/2019_PoolChamp_Clip3.mp4"
     ):
         self._cap = cv.VideoCapture(video_file)
         self._settings = self._load_settings()
         self._profiler = cProfile.Profile()
         if self._settings["program"]["profile"]:
             self._profiler.enable()
+        self._delay = self._settings["program"]["frame_delay"]
         self._fps = FPS()
         self.table = Table(self._cap, self._settings)
         self._frame = None
@@ -27,7 +29,7 @@ class PoolPredictor:
         if self._settings["program"]["OpenGL"]:
             self._run_opengl()
         else:
-            self._run_no_opengl()
+            self._run_without_opengl()
         # except (OpenGL.error.NullFunctionError, ModuleNotFoundError):
         #     self._run_no_opengl()
 
@@ -43,6 +45,8 @@ class PoolPredictor:
                 frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
                 viewer.set_image(frame)
                 self._fps.update()
+                if self._delay:
+                    time.sleep(self._delay / 1000)
             else:
                 viewer.destructor_function()
                 exit(9)
@@ -55,7 +59,7 @@ class PoolPredictor:
         viewer.set_loop(play_frame)
         viewer.start()
 
-    def _run_no_opengl(self):
+    def _run_without_opengl(self):
         if self.table.ready:
             while True:
                 ret, frame = self._cap.read()
@@ -65,7 +69,7 @@ class PoolPredictor:
                     self.table.balls.find(frame)
                     cv.imshow('frame', frame)
                     self._fps.update()
-                    if cv.waitKey(1) & 0xFF == ord('q'):
+                    if cv.waitKey(max(self._delay, 1)) & 0xFF == ord('q'):
                         break
                 else:
                     break

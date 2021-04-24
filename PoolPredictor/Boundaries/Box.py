@@ -1,6 +1,10 @@
+import math
+
+import cv2 as cv
 import pandas as pd
 import numpy as np
-from typing import Tuple
+from typing import Tuple, Union
+from numbers import Number
 from PoolPredictor.utils import Point, distance
 from PoolPredictor.Point import Point
 
@@ -40,6 +44,32 @@ class Box(pd.DataFrame):
         else:
             super().__init__(df)
 
+    @classmethod
+    def from_circle_outer(cls, c: Point, r: Number) -> 'Box':
+        d = r * 2
+        return cls.from_center_and_dims(c, d, d)
+
+    @classmethod
+    def from_circle(cls, c: Point, r: Number) -> 'Box':
+        hypotenuse = r * 2
+        side = math.sqrt((hypotenuse**2) / 2)
+        return cls.from_center_and_dims(c, side, side)
+
+    @classmethod
+    def from_center_and_dims(cls, c: Point, w: Number, h: Number) -> 'Box':
+        w = int(w / 2)
+        h = int(h / 2)
+        return cls(pd.DataFrame(
+            [
+                [c.x - w, c.y - h, "tl", 't', 'l'],
+                [c.x + w, c.y - h, "tr", 't', 'r'],
+                [c.x - w, c.y + h, "bl", 'b', 'l'],
+                [c.x + w, c.y + h, "br", 'b', 'r'],
+            ],
+            index=["tl", "tr", "bl", "br"],
+            columns=['x', 'y', 'loc', 'v_loc', 'h_loc'],
+        ))
+
     @property
     def list_corners(self):
         return [self.tl, self.tr, self.bl, self.br]
@@ -50,8 +80,8 @@ class Box(pd.DataFrame):
         Returns:
             Width that would fit the whole box
         """
-        x_min = min(self.tl['x'], self.bl['x'])
-        x_max = max(self.tr['x'], self.br['x'])
+        x_min = min(self.tl.x, self.bl.x)
+        x_max = max(self.tr.x, self.br.x)
         return x_max - x_min
 
     @property
@@ -60,8 +90,8 @@ class Box(pd.DataFrame):
         Returns:
             Height that would fit the whole box
         """
-        y_min = min(self.tl['y'], self.tr['y'])
-        y_max = max(self.bl['y'], self.br['y'])
+        y_min = min(self.tl.y, self.tr.y)
+        y_max = max(self.bl.y, self.br.y)
         return y_max - y_min
 
     @property
@@ -93,8 +123,8 @@ class Box(pd.DataFrame):
             A Box instance that can fit the calling instance box
             without rotation
         """
-        x_min = min(self.tl['x'], self.bl['x'])
-        y_min = min(self.tl['y'], self.tr['y'])
+        x_min = min(self.tl.x, self.bl.x)
+        y_min = min(self.tl.y, self.tr.y)
         width = self.width_bounding
         height = self.height_bounding
         copy = self.copy()
@@ -120,6 +150,15 @@ class Box(pd.DataFrame):
     def br(self) -> Point:
         return self._get_corner('br')
 
+    @property
+    def lines(self) -> Tuple[tuple, tuple, tuple, tuple]:
+        return (
+            (self.tl, self.tr),
+            (self.tr, self.br),
+            (self.bl, self.br),
+            (self.tl, self.bl)
+        )
+
     def _get_corner(self, loc: str) -> Point:
         """
         gets the x and y locations of the corner at the given location
@@ -137,3 +176,13 @@ class Box(pd.DataFrame):
         bounding = self.bounding_rect
         tl, br = bounding.tl, bounding.br
         return frame[tl.y:br.y, tl.x:br.x]
+
+    def draw(
+            self,
+            frame: np.ndarray,
+            color: Tuple[int, int, int] = (255, 255, 0),
+            thickness: int = 1
+    ):
+        for line in self.lines:
+            pt1, pt2 = line
+            cv.line(frame, (pt1.x, pt1.y), (pt2.x, pt2.y), color, thickness)

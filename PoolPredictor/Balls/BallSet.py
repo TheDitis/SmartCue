@@ -2,12 +2,36 @@ import numpy as np
 import pandas as pd
 import cv2 as cv
 from typing import Union, Tuple, List
+
 from PoolPredictor.Boundaries.TableBoundaries import TableBoundaries
-from PoolPredictor.utils import canny_image
+from PoolPredictor.Point import Point
+from PoolPredictor.Boundaries.Box import Box
+
+
+class Circle(pd.Series):
+    @property
+    def center(self):
+        return Point(self['x'], self['y'])
+
+    @property
+    def radius(self):
+        return self['r']
+
+    @property
+    def box_inner(self):
+        return Box.from_circle(self.center, self.radius)
+
+    @property
+    def box_outer(self):
+        return Box.from_circle_outer(self.center, self.radius)
+
+    def draw(self, frame: np.ndarray):
+        self.box_inner.draw(frame)
+        self.box_outer.draw(frame)
 
 
 class BallGroup(pd.DataFrame):
-    def __init__(self):
+    def __init__(self, ):
         super().__init__(columns=[
             'x', 'y', 'size', 'b', 'g', 'r', 'motion', 'on_field',
             'in_pocket'
@@ -28,41 +52,86 @@ class BallSet:
         self._boundaries = boundaries
         self._playfield = boundaries.bumper
         self._defaults = [0, 0, 10, 0, 0, 0, None, False, False]
-        self._max_count = 16
+        self._max_count = count
         self._target_colors = colors
         self._balls = BallGroup
+        # Increasing maxRadius from 16 to 17 resulted in false circles and
+        # undetected balls, but raising minDist from 5 to 13 fixed that issue
         self._detector = cv.cuda.createHoughCirclesDetector(
-            dp=2, minDist=25, cannyThreshold=60, votesThreshold=25,
-            minRadius=16, maxRadius=20, maxCircles=self._max_count
+            dp=1, minDist=13, cannyThreshold=60, votesThreshold=13,
+            minRadius=14, maxRadius=17, maxCircles=self._max_count
         )
-        self._blur_filter = cv.cuda.createMedianFilter(cv.CV_8UC1, 3)
-        self._gpu_frame = cv.cuda_GpuMat()
+        if self._use_cuda:
+            self._blur_filter = cv.cuda.createMedianFilter(cv.CV_8UC1, 3)
+            self._gpu_frame = cv.cuda_GpuMat()
+        else:
+            self._blur_filter = None
+            self._gpu_frame = None
 
     def find(self, frame: np.ndarray):
-        if self._use_cuda:
-            self._find_circles_cuda(frame)
-        else:
-            self._find_circles(frame)
+        """
+        Finds the balls in the given frame
+        Args:
+            frame: The frame to find balls in
 
-    def _find_circles(self, frame: np.ndarray):
+        Returns:
+            None. Modifies self
+        """
+        if self._use_cuda:
+            circles = self._find_circles_cuda(frame)
+        else:
+            circles = self._find_circles(frame)
+        self._draw_circles(frame, circles)
+        circles = pd.DataFrame(
+            circles,
+            columns=['x', 'y', 'r']
+        )
+        for i, circle in circles.iterrows():
+            circ = Circle(circle)
+            circ.draw(frame)
+
+    def _find_circles(self, frame: np.ndarray) -> np.ndarray:
+        """
+        Find potential-ball circles in the passed frame using the CPU (no CUDA)
+        Args:
+            frame: The current frame
+
+        Returns:
+            None
+        """
         # crop the frame to the inside bumper lines and prepare it
         crop = self._boundaries.pocket.crop_to(frame)
         gray = cv.cvtColor(crop, cv.COLOR_BGR2GRAY)
         blur = cv.medianBlur(gray, 3)
+        # blur = gray
 
         # find circles
         circles = cv.HoughCircles(
-            blur, cv.HOUGH_GRADIENT, 2, 25, param1=60, param2=25,
-            minRadius=16, maxRadius=20
+            blur, cv.HOUGH_GRADIENT, dp=2, minDist=13, param1=60, param2=30,
+            minRadius=14, maxRadius=17
         )
 
-        self._draw_circles(frame, circles)
+        # convert datatype and translate center to non-cropped pos
+        circles = np.uint16(np.around(circles[0]))
+        translation = np.array(self._boundaries.pocket.tl, dtype=np.uint16)
+        circles[:, 0:2] += translation
 
-    def _find_circles_cuda(self, frame: np.ndarray):
+        return circles
+
+    def _find_circles_cuda(self, frame: np.ndarray) -> np.ndarray:
+        """
+        Find potential-ball circles in the given frame with CUDA acceleration
+        Args:
+            frame: The current frame
+
+        Returns:
+            numpy array of circles
+        """
         # crop the frame to the inside bumper lines and prepare it
         crop = self._boundaries.pocket.crop_to(frame)
         gray = cv.cvtColor(crop, cv.COLOR_BGR2GRAY)
         blur = cv.medianBlur(gray, 3)
+        # blur = gray
         self._gpu_frame.upload(blur)
 
         # for some reason the cuda filters seem to be much slower
@@ -71,18 +140,27 @@ class BallSet:
 
         # find circles
         circles = self._detector.detect(self._gpu_frame).download()
-        self._draw_circles(frame, circles)
 
-    def _draw_circles(self, frame: np.ndarray, circles: np.ndarray):
         # convert datatype and translate center to non-cropped pos
-        circles = np.uint16(np.around(circles))
-        circles[0, :, 0:2] += np.array(
-            self._boundaries.pocket.tl.as_list,
-            dtype=np.uint16
-        )
+        circles = np.uint16(np.around(circles[0]))
+        translation = np.array(self._boundaries.pocket.tl, dtype=np.uint16)
+        circles[:, 0:2] += translation
 
+        return circles
+
+    @staticmethod
+    def _draw_circles(frame: np.ndarray, circles: np.ndarray):
+        """
+        Draws the passed array of circles on the passed frame inplace
+        Args:
+            frame: The frame you want circles drawn on
+            circles: The array of circles
+
+        Returns:
+            None. Modifies passed frame
+        """
         # draw circles
-        for i in circles[0, :]:
+        for i in circles:
             # draw the outer circle
             cv.circle(frame, (i[0], i[1]), i[2], (0, 255, 0), 1)
             # draw the center of the circle

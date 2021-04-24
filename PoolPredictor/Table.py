@@ -34,6 +34,7 @@ class Table:
 
         # detect cloth color
         self.color = self._detect_color()
+        print("color: ", self.color)
 
         # Initialize and locate pockets
         self.pockets = PocketSet()
@@ -53,6 +54,8 @@ class Table:
         if self.boundaries.ready:
             crop = self.boundaries.bumper.crop_to(self._ref_frame)
             flat = crop.reshape(crop.shape[0] * crop.shape[1], 3)
+            mean = np.mean(flat, axis=0)
+            print("mean: ", mean)
             modes, counts = mode(flat)
             return modes[0]
 

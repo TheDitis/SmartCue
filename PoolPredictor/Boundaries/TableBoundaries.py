@@ -239,7 +239,7 @@ class TableBoundaries:
             hor: pd.DataFrame,
             vert: pd.DataFrame,
             thresh: int = 20
-    ) -> Tuple[np.array, np.array]:
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """Removes lines that sometimes show on the edges of the frame
 
         Args:

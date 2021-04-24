@@ -27,7 +27,7 @@ default_colors = [
 
 def draw_line(
         frame: np.ndarray,
-        line: Union[list, np.array, pd.Series],
+        line: Union[list, np.ndarray, pd.Series],
         color: Union[str, tuple] = (0, 0, 255),
         thickness: int = 2
 ):
@@ -54,8 +54,8 @@ def draw_line(
 
 
 def find_intersection(
-        line1: Union[np.array, list, tuple],
-        line2: Union[np.array, list, tuple]
+        line1: Union[np.ndarray, list, tuple],
+        line2: Union[np.ndarray, list, tuple]
 ) -> Union[Tuple[int, int], None]:
     """
     Finds the intersection point of 2 lines
@@ -89,7 +89,7 @@ def find_intersection(
 
 def draw_lines(
         frame: np.ndarray,
-        lines: Union[list, np.array, pd.DataFrame],
+        lines: Union[list, np.ndarray, pd.DataFrame],
         color: tuple = (0, 0, 255),
         thickness: int = 2,
         inplace: bool = False
@@ -247,7 +247,7 @@ def auto_canny(
 
 
 # @jit(nopython=True)
-def rho_theta_to_xy_lines(lines: np.array) -> np.ndarray:
+def rho_theta_to_xy_lines(lines: np.ndarray) -> np.ndarray:
     return np.apply_along_axis(rho_theta_to_xy, 1, lines)
 
 
@@ -265,7 +265,7 @@ def rho_theta_to_xy(row):
     return np.array([x1, y1, x2, y2], dtype=np.float32)
 
 
-def get_slope(line: Union[list, pd.Series, np.array, tuple]) -> float:
+def get_slope(line: Union[list, pd.Series, np.ndarray, tuple]) -> float:
     line = np.array(line)
     x1, y1, x2, y2 = line
     if x2 - x1 == 0:

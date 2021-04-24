@@ -2,7 +2,8 @@
     "program": {
         "profile": false,
         "OpenGL": true,
-        "CUDA": true
+        "CUDA": true,
+        "frame_delay": 0
     },
     "table_detection": {
         "table_detect_setting": 0,

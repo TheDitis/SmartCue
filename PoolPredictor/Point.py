@@ -1,51 +1,43 @@
 import pandas as pd
 import numpy as np
-from typing import Union
+from typing import Union, Tuple, Iterable
+from numbers import Number
+from collections import namedtuple
 
 
-class Point:
-    def __init__(
-            self,
-            x: Union[int, float, tuple, list, np.array, pd.Series],
-            y: Union[int, float, tuple, None] = None
+class Point(namedtuple("Point", ('x', 'y'))):
+    """
+    Class representing 2D point on the frame. Wrapper over named tuple
+
+    Attributes:
+        x: returns x value (first item)
+        y: returns
+    """
+
+    # to keep memory utilization low:
+    __slots__ = ()
+
+    def __new__(
+            cls,
+            x: Union[Number, np.number, Iterable[int]],
+            y: Union[Number, np.number, None] = None
     ):
-        if x is not None and y is not None:
-            points = [x, y]
+        if isinstance(x, Iterable):
+            points = (x[0], x[1])
+        elif isinstance(x, Number) and isinstance(y, Number):
+            points = (x, y)
         else:
-            points = x
-        self._point_locs = {'x': 0, 'y': 1}
-        self._n = 0
-        self._pts = points
+            raise Exception(
+                "Point must be initialized with a single iterator with at "
+                "least 2 values, or 2 scalar values"
+            )
+        return tuple.__new__(cls, points)
 
     def __getitem__(self, item: Union[int, str]) -> Union[int, float]:
-        if item in ['x', 'X', 0]:
-            return self.x
-        elif item in ['y', 'Y', 1]:
-            return self.y
+        if item in ['x', 'X']:
+            return super().__getitem__(0)
+        elif item in ['y', 'Y']:
+            return super().__getitem__(1)
         else:
-            raise KeyError
+            super().__getitem__(item)
 
-    # implementing iter so that unpacking works
-    def __iter__(self):
-        self._n = 0
-        return self
-
-    def __next__(self) -> Union[int, float]:
-        if self._n > 1:
-            raise StopIteration
-        else:
-            v = self._pts[self._n]
-            self._n += 1
-            return v
-
-    @property
-    def x(self) -> Union[int, float]:
-        return self._pts[0]
-
-    @property
-    def y(self) -> Union[int, float]:
-        return self._pts[1]
-
-    @property
-    def as_list(self):
-        return [self.x, self.y]

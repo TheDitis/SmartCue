@@ -55,7 +55,7 @@ class PocketSet(pd.DataFrame):
         table_box = borders.table.corners
 
         # calculate size of the pockets
-        border_width = bumper_box.tr['y'] - table_box.tr['y']
+        border_width = bumper_box.tr.y - table_box.tr.y
         r = border_width * 0.4
 
         # calculate box halfway between the bumper and pocket boxes
@@ -69,10 +69,10 @@ class PocketSet(pd.DataFrame):
         combined = Box(combined)
 
         # find side pocket locations
-        x_mid_t = (combined.tl['x'] + combined.tr['x']) / 2
-        x_mid_b = (combined.bl['x'] + combined.br['x']) / 2
-        y_mid_t = (pocket_box.tl['y'] + pocket_box.tr['y']) / 2
-        y_mid_b = (pocket_box.bl['y'] + pocket_box.br['y']) / 2
+        x_mid_t = (combined.tl.x + combined.tr.x) / 2
+        x_mid_b = (combined.bl.x + combined.br.x) / 2
+        y_mid_t = (pocket_box.tl.y + pocket_box.tr.y) / 2
+        y_mid_b = (pocket_box.bl.y + pocket_box.br.y) / 2
 
         # tack on the pocket number row and radius
         combined["num"] = combined["loc"].apply(
