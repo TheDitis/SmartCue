@@ -50,12 +50,12 @@ class PocketSet(pd.DataFrame):
         Returns:
             None
         """
-        bumper_box = borders.bumper.corners
-        pocket_box = borders.pocket.corners
-        table_box = borders.table.corners
+        bumper_box = borders.bumper.BoundaryGroup.corners
+        pocket_box = borders.pocket.BoundaryGroup.corners
+        table_box = borders.table.BoundaryGroup.corners
 
         # calculate size of the pockets
-        border_width = bumper_box.tr.y - table_box.tr.y
+        border_width = bumper_box.Box.tr.y - table_box.Box.tr.y
         r = border_width * 0.4
 
         # calculate box halfway between the bumper and pocket boxes
@@ -66,13 +66,13 @@ class PocketSet(pd.DataFrame):
                 'h_loc': min, 'v_loc': min
             })
         combined.index = combined["loc"]
-        combined = Box(combined)
+        combined = combined
 
         # find side pocket locations
-        x_mid_t = (combined.tl.x + combined.tr.x) / 2
-        x_mid_b = (combined.bl.x + combined.br.x) / 2
-        y_mid_t = (pocket_box.tl.y + pocket_box.tr.y) / 2
-        y_mid_b = (pocket_box.bl.y + pocket_box.br.y) / 2
+        x_mid_t = (combined.Box.tl.x + combined.Box.tr.x) / 2
+        x_mid_b = (combined.Box.bl.x + combined.Box.br.x) / 2
+        y_mid_t = (pocket_box.Box.tl.y + pocket_box.Box.tr.y) / 2
+        y_mid_b = (pocket_box.Box.bl.y + pocket_box.Box.br.y) / 2
 
         # tack on the pocket number row and radius
         combined["num"] = combined["loc"].apply(
@@ -165,5 +165,5 @@ class PocketSet(pd.DataFrame):
                 2,
             )
         if save:
-            cv.imwrite("../../debug_images/7_pockets.png", frame)
+            cv.imwrite("debug_images/7_pockets.png", frame)
         return frame

@@ -9,7 +9,7 @@ from PoolPredictor.utils import Point, distance
 from PoolPredictor.Point import Point
 
 
-@pd.api.extensions.register_dataframe_accessor("box")
+@pd.api.extensions.register_dataframe_accessor("Box")
 class Box:
     def __init__(self, df: pd.DataFrame):
         if "x1" in df:
@@ -30,17 +30,15 @@ class Box:
             )
             df['x'] = df['x'].astype(int)
             df['y'] = df['y'].astype(int)
-
+        self._validate(df)
         self._df = df
 
     def __repr__(self):
         return self._df
 
-    getattr()
-
     @staticmethod
-    def _validate(obj):
-        if not all(map(lambda c: c in obj.cols, ['x1', 'y1', 'x2', 'y2'])):
+    def _validate(df):
+        if not all(map(lambda c: c in df, ['x', 'y', 'loc', 'v_loc', 'h_loc'])):
             raise AttributeError("Must have x1, y1, x2, y2")
 
     @classmethod
@@ -189,7 +187,7 @@ class Box:
         cv.rectangle(frame, tuple(self.tl), tuple(self.br), color, thickness)
 
 
-class Box_old(pd.DataFrame):
+class Box(pd.DataFrame):
     """
     Takes a pd.Dataframe representing a set of boundaries (ie. all
     bumper boundaries) and converts it into a representation of the
@@ -203,7 +201,7 @@ class Box_old(pd.DataFrame):
             df: dataframe containing 4 lines with columns x1, y1, x2,
                 & y2. These lines should represent sides of a box
         """
-        if "x1" in df:
+        if isinstance(df, pd.DataFrame) and "x1" in df:
             x_min = df["x1"].min()
             x_max = df["x2"].max()
             y_min = df["y1"].min()

@@ -59,7 +59,7 @@ class Circle(pd.Series):
         crop = self.box_inner.crop(frame)
         flat = crop.reshape(crop.shape[0] * crop.shape[1], 3)
         mean = np.mean(flat, axis=0)
-        print(mean)
+        # print(mean)
 
 
 class BallGroup(pd.DataFrame):
@@ -87,16 +87,21 @@ class BallSet:
         self._max_count = count
         self._target_colors = colors
         self._balls = BallGroup
-        # Increasing maxRadius from 16 to 17 resulted in false circles and
-        # undetected balls, but raising minDist from 5 to 13 fixed that issue
-        self._detector = cv.cuda.createHoughCirclesDetector(
-            dp=1, minDist=13, cannyThreshold=60, votesThreshold=13,
-            minRadius=14, maxRadius=17, maxCircles=self._max_count
-        )
+
         if self._use_cuda:
-            self._blur_filter = cv.cuda.createMedianFilter(cv.CV_8UC1, 3)
-            self._gpu_frame = cv.cuda_GpuMat()
-        else:
+            try:
+                self._detector = cv.cuda.createHoughCirclesDetector(
+                    dp=1, minDist=13, cannyThreshold=60, votesThreshold=13,
+                    minRadius=14, maxRadius=17, maxCircles=self._max_count
+                )
+                self._blur_filter = cv.cuda.createMedianFilter(cv.CV_8UC1, 3)
+                self._gpu_frame = cv.cuda_GpuMat()
+            except AttributeError:
+                print("The CUDA setting is set to true in settings.json but "
+                      "the installed OpenCV module was not built with CUDA "
+                      "support. Switching to CPU.")
+                self._use_cuda = False
+        if not self._use_cuda:
             self._blur_filter = None
             self._gpu_frame = None
 
@@ -119,6 +124,7 @@ class BallSet:
         #     columns=['x', 'y', 'r']
         # )
         # e1 = cv.getTickCount()
+
         for circle in circles:
             circ = Circle(circle)
             circ.find_color(frame)
@@ -139,7 +145,7 @@ class BallSet:
             None
         """
         # crop the frame to the inside bumper lines and prepare it
-        crop = self._boundaries.pocket.crop(frame)
+        crop = self._boundaries.pocket.Box.crop(frame)
         gray = cv.cvtColor(crop, cv.COLOR_BGR2GRAY)
         blur = cv.medianBlur(gray, 3)
         # blur = gray
@@ -152,7 +158,7 @@ class BallSet:
 
         # convert datatype and translate center to non-cropped pos
         circles = np.uint16(np.around(circles[0]))
-        translation = np.array(self._boundaries.pocket.tl, dtype=np.uint16)
+        translation = np.array(self._boundaries.pocket.Box.tl, dtype=np.uint16)
         circles[:, 0:2] += translation
 
         return circles

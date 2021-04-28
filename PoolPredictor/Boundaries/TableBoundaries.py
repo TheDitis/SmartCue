@@ -27,7 +27,7 @@ class TableBoundaries:
         self._ref_frame: Union[np.ndarray, None] = None
         self._settings: dict = settings
         self._cap: cv.CAP_V4L2 = cap
-        self._boundaries: Union[BoundaryGroup, None] = None
+        self._boundaries: Union[pd.DataFrame, None] = None
 
     @property
     def ready(self):
@@ -67,15 +67,15 @@ class TableBoundaries:
 
     @property
     def bumper(self):
-        return self._boundaries.bumper
+        return self._boundaries.BoundaryGroup.bumper
 
     @property
     def pocket(self):
-        return self._boundaries.pocket
+        return self._boundaries.BoundaryGroup.pocket
 
     @property
     def table(self):
-        return self._boundaries.table
+        return self._boundaries.BoundaryGroup.table
 
     def __repr__(self):
         return self._boundaries
@@ -84,7 +84,7 @@ class TableBoundaries:
         return self._boundaries[item]
 
     def __len__(self):
-        return len(self._boundaries)
+        return len(self._boundaries) if self._boundaries is not None else 0
 
     def find(self):
         """
@@ -129,8 +129,11 @@ class TableBoundaries:
 
                 canny = canny_image(frame, canny_setting)
 
+                black = np.zeros((500, 1000, 3))
+                cv.imwrite("debug_images/0_black_test.png", black)
+
                 # save image to debug_images folder
-                cv.imwrite("../../debug_images/1_table_canny.png", canny)
+                cv.imwrite("debug_images/1_table_canny.png", canny)
 
                 lines = cv.HoughLinesP(
                     canny,
@@ -149,11 +152,11 @@ class TableBoundaries:
                     self._found_lines = np.concatenate(
                         (self._found_lines, lines), axis=0)
 
-        self._boundaries = self._group_found_lines()
-
         print("lines found: ", len(self._found_lines))
         with_lines = draw_lines(self._ref_frame, self._found_lines)
-        cv.imwrite("../../debug_images/2_table_lines.png", with_lines)
+        cv.imwrite("debug_images/2_table_lines.png", with_lines)
+
+        self._boundaries = self._group_found_lines()
 
     def _get_hough_lines_settings(self) -> dict:
         """
@@ -172,7 +175,7 @@ class TableBoundaries:
                 output[key] = val
         return output
 
-    def _group_found_lines(self) -> BoundaryGroup:
+    def _group_found_lines(self) -> pd.DataFrame:
         """
         groups the preliminary found-lines into clusters based on
         their relative distances, identifies the clusters that have
@@ -226,13 +229,12 @@ class TableBoundaries:
             np.concatenate([np.array(horizontal), np.array(vertical)])
         ).astype(int)
 
-        return BoundaryGroup(
-            self._side_line_clusters_to_boundaries(
-                df_h,
-                df_v,
-                cluster_sides
-            )
+        return self._side_line_clusters_to_boundaries(
+            df_h,
+            df_v,
+            cluster_sides
         )
+
 
     def _filter_found_lines(
             self,
@@ -453,6 +455,7 @@ class TableBoundaries:
             # combine these values into one df (3 lines, one for each cluster)
             lines = pd.concat([means, pt1, pt2], axis=1)
             # add types of each boundary ('bumper', 'table', 'pocket')
+
             lines.sort_values(par_coords[0], inplace=True)
             lines["type"] = lines.reset_index().index.map(
                 lambda x: labels[x]
@@ -551,11 +554,11 @@ class TableBoundaries:
         """
         # save clustered-line images to debug folder
         cv.imwrite(
-            "../../debug_images/3_horizontal_groups.png",
+            "debug_images/3_horizontal_groups.png",
             draw_lines_by_group(self._ref_frame, hor)
         )
         cv.imwrite(
-            "../../debug_images/3_vertical_groups.png",
+            "debug_images/3_vertical_groups.png",
             draw_lines_by_group(self._ref_frame, vert)
         )
 
@@ -599,7 +602,7 @@ class TableBoundaries:
             self._ref_frame,
             averaged
         )
-        cv.imwrite("../../debug_images/5_averaged_clusters.png", averaged)
+        cv.imwrite("debug_images/5_averaged_clusters.png", averaged)
 
         # Saving the image for joined-corner boundaries
         # make a copy where the group number is type for line image
@@ -612,7 +615,7 @@ class TableBoundaries:
             self._ref_frame,
             joined_groupby_type
         )
-        cv.imwrite("../../debug_images/6_boundaries_joined.png", borders)
+        cv.imwrite("debug_images/6_boundaries_joined.png", borders)
 
     def draw_boundary_lines(
             self,
