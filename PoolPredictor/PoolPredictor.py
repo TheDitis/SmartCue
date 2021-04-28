@@ -6,6 +6,7 @@ import cProfile
 import json
 import cv2 as cv
 from imutils.video import FPS
+import numpy as np
 
 
 class PoolPredictor:
@@ -24,14 +25,13 @@ class PoolPredictor:
         self._frame = None
 
     def run(self):
+        # black = np.zeros((1000, 500, 3))
+        # cv.imwrite("debug_images/0_black_test.png", black)
         self._fps.start()
-        # try:
         if self._settings["program"]["OpenGL"]:
             self._run_opengl()
         else:
             self._run_without_opengl()
-        # except (OpenGL.error.NullFunctionError, ModuleNotFoundError):
-        #     self._run_no_opengl()
 
     def _run_opengl(self):
         def stop_loop():
@@ -40,7 +40,7 @@ class PoolPredictor:
         def play_frame():
             ret, frame = self._cap.read()
             if ret:
-                # self.table.draw_boundary_lines(frame, inplace=True)
+                self.table.draw_boundary_lines(frame, inplace=True)
                 self.table.balls.find(frame)
                 frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
                 viewer.set_image(frame)

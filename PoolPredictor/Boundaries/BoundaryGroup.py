@@ -6,7 +6,8 @@ from PoolPredictor.Boundaries.Box import Box
 from typing import Union, Tuple
 
 
-class BoundaryGroup(pd.DataFrame):
+@pd.api.extensions.register_dataframe_accessor("BoundaryGroup")
+class BoundaryGroup:
     """
     Represents any group of table boundaries, whether all boundaries
     on a given side of the table or all boundaries of the same type.
@@ -17,6 +18,9 @@ class BoundaryGroup(pd.DataFrame):
     there are multiple rows matching the query, or a Box if corners
     are requested on an instance that has exactly 4 lines.
     """
+    def __init__(self, df: pd.DataFrame):
+        self._df = df
+
     @property
     def top(self):
         return self._get_by_side('t')
@@ -112,19 +116,19 @@ class BoundaryGroup(pd.DataFrame):
             return corners.bounding_rect
 
     @property
-    def corners(self) -> Union[Box, None]:
-        if len(self) == 4:
-            return Box(self)
+    def corners(self) -> Union[pd.DataFrame, None]:
+        if len(self._df) == 4:
+            return self._df.Box._df
 
     def crop(self, frame: np.ndarray) -> np.ndarray:
         corners = self.corners
         if corners is not None:
-            return corners.crop(frame)
+            return corners.Box.crop(frame)
 
     def _get_by_side(
             self,
             side: str
-    ) -> Union[Boundary, 'BoundaryGroup', None]:
+    ) -> Union[pd.Series, pd.DataFrame, None]:
         """
         Get boundary/boundaries on a given side of the table
         Args:
@@ -138,11 +142,12 @@ class BoundaryGroup(pd.DataFrame):
         """
         if side not in ['t', 'b', 'l', 'r']:
             return None
-        grp = self[self["side"] == side]
-        if len(grp) == 1:
-            return Boundary(grp)
-        else:
-            return BoundaryGroup(grp)
+        grp = self._df[self._df["side"] == side]
+        return grp
+        # if len(grp) == 1:
+        #     return Boundary(grp)
+        # else:
+        #     return BoundaryGroup(grp)
 
     def _get_by_type(
             self,
@@ -161,11 +166,12 @@ class BoundaryGroup(pd.DataFrame):
         """
         if kind not in ["table", "pocket", "bumper"]:
             return None
-        grp = self[self["type"] == kind]
-        if len(grp) == 1:
-            return Boundary(grp)
-        else:
-            return BoundaryGroup(grp)
+        grp = self._df[self._df["type"] == kind]
+        return grp
+        # if len(grp) == 1:
+        #     return Boundary(grp)
+        # else:
+        #     return BoundaryGroup(grp)
 
     def _get_corner(self, loc: str) -> Union[Point, None]:
         """
