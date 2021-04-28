@@ -59,7 +59,6 @@ class Table:
             modes, counts = mode(flat)
             return modes[0]
 
-
     def draw_boundary_lines(
             self,
             frame: np.ndarray,

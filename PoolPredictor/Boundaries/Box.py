@@ -358,6 +358,7 @@ class Box(pd.DataFrame):
         bounding = self.bounding_rect
         tl, br = bounding.tl, bounding.br
         return frame[tl.y:br.y, tl.x:br.x]
+        # return frame
 
     def draw(
             self,

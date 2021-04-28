@@ -16,8 +16,6 @@ class PoolPredictor:
         self._cap = cv.VideoCapture(video_file)
         self._settings = self._load_settings()
         self._profiler = cProfile.Profile()
-        if self._settings["program"]["profile"]:
-            self._profiler.enable()
         self._delay = self._settings["program"]["frame_delay"]
         self._fps = FPS()
         self.table = Table(self._cap, self._settings)
@@ -57,15 +55,29 @@ class PoolPredictor:
         )
         viewer.set_destructor(stop_loop)
         viewer.set_loop(play_frame)
+        self._on_start()
         viewer.start()
 
     def _run_without_opengl(self):
         if self.table.ready:
+            self._on_start()
+            first = True
             while True:
                 ret, frame = self._cap.read()
                 if ret:
                     self._frame = frame
-                    self.table.draw_boundary_lines(frame, inplace=True)
+                    if first:
+                        prof = cProfile.Profile()
+                        prof.enable()
+                        start = time.time()
+                        for _ in range(1000):
+                            self.table.boundaries.pocket.crop(frame)
+                        first = False
+                        prof.disable()
+                        prof.print_stats(sort="time")
+                        loop_time = time.time() - start
+                        print(f"LOOP TOOK {int(loop_time * 1000)}ms")
+                    # self.table.draw_boundary_lines(frame, inplace=True)
                     self.table.balls.find(frame)
                     cv.imshow('frame', frame)
                     self._fps.update()
@@ -121,6 +133,10 @@ class PoolPredictor:
             with open("settings.json", "w") as file:
                 json.dump(data, file, indent=4, sort_keys=True)
         return data
+
+    def _on_start(self):
+        if self._settings["program"]["profile"]:
+            self._profiler.enable()
 
     def stop(self):
         self._cap.release()

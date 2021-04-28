@@ -118,10 +118,11 @@ class BallSet:
         #     columns=['x', 'y', 'r']
         # )
         # e1 = cv.getTickCount()
-        for circle in circles:
-            circ = Circle(circle)
-            circ.find_color(frame)
-            circ.draw(frame)
+
+        # for circle in circles:
+        #     circ = Circle(circle)
+        #     circ.find_color(frame)
+        #     circ.draw(frame)
             # circ.find_color(frame)
 
         # e2 = cv.getTickCount()
@@ -166,7 +167,8 @@ class BallSet:
             numpy array of circles
         """
         # crop the frame to the inside bumper lines and prepare it
-        crop = self._boundaries.pocket.crop(frame)
+        # crop = self._boundaries.pocket.crop(frame)
+        crop = frame
         gray = cv.cvtColor(crop, cv.COLOR_BGR2GRAY)
         blur = cv.medianBlur(gray, 3)
         # blur = gray
@@ -179,7 +181,7 @@ class BallSet:
         # find circles
         circles = self._detector.detect(self._gpu_frame).download()
 
-        # convert datatype and translate center to non-cropped pos
+        # # convert datatype and translate center to non-cropped pos
         circles = np.uint16(np.around(circles[0]))
         translation = np.array(self._boundaries.pocket.tl, dtype=np.uint16)
         circles[:, 0:2] += translation
