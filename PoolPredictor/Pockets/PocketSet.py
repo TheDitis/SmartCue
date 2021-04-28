@@ -167,3 +167,5 @@ class PocketSet(pd.DataFrame):
         if save:
             cv.imwrite("../../debug_images/7_pockets.png", frame)
         return frame
+
+
