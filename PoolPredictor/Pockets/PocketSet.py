@@ -58,30 +58,37 @@ class PocketSet(pd.DataFrame):
         border_width = bumper_box.tr.y - table_box.tr.y
         r = border_width * 0.4
 
+        print(type(bumper_box))
+        print(bumper_box)
+
         # calculate box halfway between the bumper and pocket boxes
-        combined = pd.concat([bumper_box, pocket_box]) \
-            .groupby("loc", as_index=False) \
-            .agg({
-                'x': np.mean, 'y': np.mean, 'loc': min,
-                'h_loc': min, 'v_loc': min
-            })
-        combined.index = combined["loc"]
-        combined = Box(combined)
+        # midway = pd.concat([bumper_box, pocket_box]) \
+        #     .groupby("loc", as_index=False) \
+        #     .agg({
+        #         'x': np.mean, 'y': np.mean, 'loc': min,
+        #         'h_loc': min, 'v_loc': min
+        #     })
+        # midway.index = midway["loc"]
+        # midway = Box(midway)
+
+        midway = bumper_box.midway_box(pocket_box)
 
         # find side pocket locations
-        x_mid_t = (combined.tl.x + combined.tr.x) / 2
-        x_mid_b = (combined.bl.x + combined.br.x) / 2
+        x_mid_t = (midway.tl.x + midway.tr.x) / 2
+        x_mid_b = (midway.bl.x + midway.br.x) / 2
         y_mid_t = (pocket_box.tl.y + pocket_box.tr.y) / 2
         y_mid_b = (pocket_box.bl.y + pocket_box.br.y) / 2
 
+
+
         # tack on the pocket number row and radius
-        combined["num"] = combined["loc"].apply(
+        midway["num"] = midway["loc"].apply(
             lambda x: self.pocket_nums[x]
         )
-        combined["r"] = combined.apply(lambda _: r, axis=1)
+        midway["r"] = midway.df.apply(lambda _: r, axis=1)
 
         # add all the corner pockets
-        for i, row in combined.iterrows():
+        for _, row in midway.df.iterrows():
             self.loc[row["loc"]] = Pocket(row)
 
         # add the top side pocket

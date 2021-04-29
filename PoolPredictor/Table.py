@@ -33,8 +33,8 @@ class Table:
         self.boundaries.find()
 
         # detect cloth color
-        self.color = self._detect_color()
-        print("color: ", self.color)
+        # self.color = self._detect_color()
+        # print("color: ", self.color)
 
         # Initialize and locate pockets
         self.pockets = PocketSet()

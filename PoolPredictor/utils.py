@@ -113,7 +113,7 @@ def draw_lines(
     if len(frame.shape) == 2:
         frame = cv.cvtColor(frame, cv.COLOR_GRAY2BGR)
 
-    if isinstance(lines, pd.DataFrame):
+    if isinstance(lines, pd.DataFrame) or hasattr(lines, 'df'):
         type_colors = {"table": 0, "pocket": 2, "bumper": 3}
         for i, line in lines.iterrows():
             if "type" in line:
@@ -128,6 +128,7 @@ def draw_lines(
     else:
         for line_s in lines:
             # if line_s is a single line:
+
             if isinstance(line_s[0], (int, float, np.int32, np.int64)):
                 draw_line(frame, line_s)
             # if line_s is a group of lines

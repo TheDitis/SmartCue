@@ -11,8 +11,58 @@ from PoolPredictor.Boundaries.Box import Box
 number = (int, float, np.number)
 iterable = (list, tuple, pd.Series, np.ndarray)
 
+@pd.api.extensions.register_series_accessor("Circle")
+class Circle:
+    @dispatch(number, number, number)
+    def __init__(self, x, y, r):
+        # since you can't assign a series column names unless from a df
+        self._df = pd.DataFrame(
+            [[x, y, r]],
+            columns=['x', 'y', 'r']
+        ).iloc[0]
 
-class Circle(pd.Series):
+    @dispatch((pd.DataFrame, np.ndarray, pd.Series, list, tuple))
+    def __init__(self, vals):
+        if isinstance(vals, pd.DataFrame):
+            vals = vals.iloc[0]
+            self.__init__(vals['x'], vals['y'], vals['r'])
+        elif isinstance(vals, pd.Series) and 'x' in vals:
+            self.__init__(vals['x'], vals['y'], vals['r'])
+        elif isinstance(vals, iterable) and len(vals) >= 3:
+            x, y, r, *_ = vals
+            self.__init__(x, y, r)
+
+    @property
+    def df(self):
+        return self._df
+
+    @property
+    def center(self):
+        return Point(self.df['x'], self.df['y'])
+
+    @property
+    def radius(self):
+        return self.df['r']
+
+    @property
+    def box_inner(self):
+        return Box.from_circle(self.center, self.radius)
+
+    @property
+    def box_outer(self):
+        return Box.from_circle_outer(self.center, self.radius)
+
+    def draw(self, frame: np.ndarray):
+        self.box_inner.draw(frame)
+        # self.box_outer.draw(frame)
+
+    def find_color(self, frame: np.ndarray):
+        crop = self.box_inner.crop(frame)
+        flat = crop.reshape(crop.shape[0] * crop.shape[1], 3)
+        mean = np.mean(flat, axis=0)
+
+
+class Circle_old(pd.Series):
     @dispatch(number, number, number)
     def __init__(self, x, y, r):
         # since you can't assign a series column names unless from a df
@@ -120,10 +170,10 @@ class BallSet:
         # e1 = cv.getTickCount()
 
         # for circle in circles:
-        #     circ = Circle(circle)
+        #     circ = Circle(*circle)
         #     circ.find_color(frame)
         #     circ.draw(frame)
-            # circ.find_color(frame)
+        #     circ.find_color(frame)
 
         # e2 = cv.getTickCount()
         # t = (e2 - e1) / cv.getTickFrequency()
@@ -173,13 +223,14 @@ class BallSet:
         blur = cv.medianBlur(gray, 3)
         # blur = gray
         self._gpu_frame.upload(blur)
-
-        # for some reason the cuda filters seem to be much slower
-        # gray = cv.cuda.cvtColor(self._frame, cv.COLOR_BGR2GRAY)
-        # blur = self._blur_filter.apply(gray)
-
         # find circles
         circles = self._detector.detect(self._gpu_frame).download()
+
+        # # for some reason the cuda filters seem to be much slower
+        # self._gpu_frame.upload(frame)
+        # gray = cv.cuda.cvtColor(self._gpu_frame, cv.COLOR_BGR2GRAY)
+        # blur = self._blur_filter.apply(gray)
+        # circles = self._detector.detect(blur).download()
 
         # # convert datatype and translate center to non-cropped pos
         circles = np.uint16(np.around(circles[0]))

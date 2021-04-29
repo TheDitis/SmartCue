@@ -74,6 +74,10 @@ class TableBoundaries:
         return self._boundaries.pocket
 
     @property
+    def pocket_(self):
+        return self._boundaries._get_by_type("pocket", False)
+
+    @property
     def table(self):
         return self._boundaries.table
 

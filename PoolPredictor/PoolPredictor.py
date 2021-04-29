@@ -66,18 +66,20 @@ class PoolPredictor:
                 ret, frame = self._cap.read()
                 if ret:
                     self._frame = frame
-                    if first:
-                        prof = cProfile.Profile()
-                        prof.enable()
-                        start = time.time()
-                        for _ in range(1000):
-                            self.table.boundaries.pocket.crop(frame)
-                        first = False
-                        prof.disable()
-                        prof.print_stats(sort="time")
-                        loop_time = time.time() - start
-                        print(f"LOOP TOOK {int(loop_time * 1000)}ms")
-                    # self.table.draw_boundary_lines(frame, inplace=True)
+                    # if first:
+                    #     print("running test loop")
+                        # prof = cProfile.Profile()
+                        # prof.enable()
+                        # start = time.time()
+                        # for _ in range(1000):
+                            # self.table.boundaries.pocket  # .crop(frame)
+                            # self.table.boundaries.pocket
+                        # first = False
+                        # prof.disable()
+                        # prof.print_stats(sort="time")
+                        # loop_time = time.time() - start
+                        # print(f"LOOP TOOK {int(loop_time * 1000)}ms")
+                    self.table.draw_boundary_lines(frame, inplace=True)
                     self.table.balls.find(frame)
                     cv.imshow('frame', frame)
                     self._fps.update()
