@@ -7,7 +7,7 @@
 
 <br/><br/>
 # The Goal:
-### To be able to mount a camera and projector over a pool table, and project lines of motion. The hope is to identify when a que is lined up, so that a forecasted line of motion can be projected for the queball in realtime, showing which balls or walls might be hit, and draw any trajectory lines for those balls.
+### To be able to mount a camera and projector over a pool table, and project predicted trajectories. The hope is to identify when a que is lined up, so that a forecasted line of motion can be projected for the queball in realtime, showing which balls, walls, or pockets it might be hit as a probability gradient.
 
 
 
@@ -17,7 +17,7 @@
 
 <br/><br/>
 # The Algorithm:
-### 1. Take a few frames, and identify long straight lines throughout them via Hough Transform, filtering them based on relative distance and orientation relationships.
+### 1. Identify table lines by taking a few frames and identify long straight lines throughout them via Hough Transform, filtering them based on relative distance and orientation relationships.
 ### 2. Separate found lines into bumper, pocket, and table edge lines.
 ### 3. Identify pocket areas based on line intersections and lengths between intersections.
 ### 4. Start checking frames live, looking only within the table boundaries for circles.
