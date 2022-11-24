@@ -2,7 +2,7 @@
 ### A rewrite of my [PoolPredictor](https://github.com/TheDitis/PoolPredictor) project
 #### This readme is largely coppied from my original PoolPredictor readme. That project is farther along, but of much, much lower code quality. I will update once this project is further along.
 
-### Example From Old Version (PoolPredictor):
+### Example From Old Version (early version of PoolPredictor):
 ![Demo Gif](https://github.com/TheDitis/PoolPredictor/blob/master/doc_resources/PoolGif1.gif)
 
 <br/><br/>
